@@ -3,9 +3,10 @@
   "task": "Extract inline CSS and JS from index.html into separate files (css/styles.css, js/*.js ES modules)",
   "created": "2026-05-28",
   "github_issue": 32,
-  "phases_completed": ["research"],
-  "current_phase": "design",
+  "phases_completed": ["research", "design"],
+  "current_phase": "plan",
   "phase_results": {
-    "research": "artifacts/js-refactor/research.md committed"
+    "research": "artifacts/js-refactor/research.md committed",
+    "design": "6 design documents in artifacts/js-refactor/design/"
   }
 }

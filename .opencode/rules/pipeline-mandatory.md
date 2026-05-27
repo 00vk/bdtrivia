@@ -29,6 +29,24 @@ Before starting ANY feature, create a GitHub issue for it:
 
 All pipeline outputs MUST be written to `.artifacts/<feature-slug>/` and committed. No exceptions.
 
+## HARD RULE: Source File Freeze Outside Implement Phase
+
+Only the implement phase (writer agent) may create or modify source files.
+
+**Research, design, and plan agents are STRICTLY FORBIDDEN** from creating or modifying any file outside `.artifacts/<feature>/`. This includes but is not limited to:
+
+- `index.html`
+- `css/*.css`
+- `js/*.js`
+- Any other `.html`, `.css`, `.js`, `.json` (outside `.artifacts/`) files
+
+**If source files already exist** (e.g., orphaned module files from a previous attempt), the research phase MUST:
+1. Report their existence as a fact in `research.md`
+2. **NOT modify or delete them**
+3. Leave them for the implement phase to handle
+
+Violation: any agent creating or modifying source files outside implement phase is a pipeline violation.
+
 ## Verification
 
 After every pipeline run, verify that:
