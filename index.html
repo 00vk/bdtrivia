@@ -568,13 +568,29 @@ function startTimer(endsAt, displayEl) {
 
 // ─── Player: Select Answer ──────────────────────────────────────────
 function selectAnswer(code, itemIndex, answer) {
-  // P1.7 — will persist answer to Firebase
-  // For now, visually highlight the selected option
-  var container = document.getElementById('game-player-options');
-  var buttons = container.querySelectorAll('.opt-btn');
-  buttons.forEach(function(btn) {
-    btn.classList.toggle('selected', btn.textContent === answer);
+  if (!currentPlayerId || !answer) return;
+
+  // Check if already answered
+  var answerRef = db.ref('rooms/' + code + '/answers/' + itemIndex + '/' + currentPlayerId);
+  answerRef.once('value').then(function(snap) {
+    if (snap.exists()) return; // already answered
+
+    answerRef.set({
+      answer: answer,
+      answeredAt: firebase.database.ServerValue.TIMESTAMP
+    }).then(function() {
+      showAnswerWaiting(code, itemIndex);
+    });
   });
+}
+
+// ─── Player: Show Waiting State ──────────────────────────────────────
+function showAnswerWaiting(code, itemIndex) {
+  var container = document.getElementById('game-player-options');
+  container.innerHTML = '<p style="font-size:1.1em;opacity:0.9;">Ответ принят!</p><p class="waiting" style="margin-top:4px;">Ждём остальных...</p>';
+  // Disable any active inputs/buttons
+  var inputs = container.querySelectorAll('input, button');
+  inputs.forEach(function(el) { el.disabled = true; });
 }
 
 // ─── Host: Answer Count ─────────────────────────────────────────────
