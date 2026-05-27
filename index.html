@@ -502,7 +502,9 @@ function renderCurrentItem(code, isHost, itemIndex, timerEndsAt) {
     var timerEl = document.getElementById('game-' + prefix + '-timer');
     if (isHost) {
       startTimer(timerEndsAt, timerEl, function() {
-        db.ref('rooms/' + code).update({ state: 'reveal' });
+        computeScores(code, itemIndex).then(function() {
+          db.ref('rooms/' + code).update({ state: 'reveal' });
+        });
       });
     } else {
       startTimer(timerEndsAt, timerEl);
@@ -574,6 +576,43 @@ function startTimer(endsAt, displayEl, onExpire) {
   }
   tick();
   timerInterval = setInterval(tick, 1000);
+}
+
+// ─── Host: Compute Scores ───────────────────────────────────────────
+function computeScores(code, itemIndex) {
+  var item = gameItems[itemIndex];
+  if (!item || item.type !== 'question') return Promise.resolve();
+
+  var timeLimitMs = (item.timeLimit || 20) * 1000;
+  var correctAnswers = Array.isArray(item.correctAnswer)
+    ? item.correctAnswer.map(function(ca) { return ca.toLowerCase(); })
+    : [item.correctAnswer.toLowerCase()];
+
+  return db.ref('rooms/' + code).once('value').then(function(snap) {
+    var room = snap.val();
+    var answers = (room.answers && room.answers[itemIndex]) || {};
+    var players = room.players || {};
+    var questionStartedAt = (room.timerEndsAt || 0) - timeLimitMs;
+
+    var updates = {};
+    Object.keys(answers).forEach(function(playerId) {
+      var a = answers[playerId];
+      var isCorrect = correctAnswers.indexOf((a.answer || '').toLowerCase()) !== -1;
+
+      var points = 0;
+      if (isCorrect && a.answeredAt) {
+        var elapsed = a.answeredAt - questionStartedAt;
+        var ratio = elapsed / timeLimitMs;
+        points = Math.round(item.maxScore * Math.max(0, 1 - ratio * 0.85));
+      }
+
+      updates['answers/' + itemIndex + '/' + playerId + '/correct'] = isCorrect;
+      updates['answers/' + itemIndex + '/' + playerId + '/points'] = points;
+      updates['players/' + playerId + '/score'] = ((players[playerId] && players[playerId].score) || 0) + points;
+    });
+
+    return Object.keys(updates).length > 0 ? db.ref('rooms/' + code).update(updates) : Promise.resolve();
+  });
 }
 
 // ─── Player: Select Answer ──────────────────────────────────────────
