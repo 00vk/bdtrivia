@@ -1347,21 +1347,25 @@ function tryReconnect() {
 
 if (roomFromUrl) {
   currentRoomCode = roomFromUrl.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (!currentRoomCode) { showScreen('screen-player-roomcode'); return; }
-  db.ref('rooms/' + currentRoomCode).once('value').then(function(snapshot) {
-    if (!snapshot.exists()) { showScreen('screen-player-roomcode'); return; }
-    var room = snapshot.val();
-    if (room.state !== 'lobby') {
-      showError(playerCodeError, 'Игра уже началась');
-      document.getElementById('player-code-input').value = currentRoomCode;
+  if (!currentRoomCode) { showScreen('screen-player-roomcode'); }
+  else {
+    db.ref('rooms/' + currentRoomCode).once('value').then(function(snapshot) {
+      if (!snapshot.exists()) { showScreen('screen-player-roomcode'); }
+      else {
+        var room = snapshot.val();
+        if (room.state !== 'lobby') {
+          showError(playerCodeError, 'Игра уже началась');
+          document.getElementById('player-code-input').value = currentRoomCode;
+          showScreen('screen-player-roomcode');
+        } else {
+          showScreen('screen-player-nickname');
+        }
+      }
+    }).catch(function(err) {
+      console.error('Room lookup failed:', err);
       showScreen('screen-player-roomcode');
-      return;
-    }
-    showScreen('screen-player-nickname');
-  }).catch(function(err) {
-    console.error('Room lookup failed:', err);
-    showScreen('screen-player-roomcode');
-  });
+    });
+  }
 } else {
   tryReconnect();
 }
