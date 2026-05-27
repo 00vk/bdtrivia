@@ -408,6 +408,9 @@ function listenGameState(code, isHost) {
         showScreen(isHost ? 'screen-game-host' : 'screen-game-player');
         renderCurrentItem(code, isHost, room.currentItem, room.timerEndsAt);
       });
+    } else if (state === 'reveal') {
+      // P1.10 will replace this placeholder
+      document.getElementById('game-' + (isHost ? 'host' : 'player') + '-options').innerHTML = '<p class="waiting">Время вышло!</p>';
     }
   });
 
@@ -497,7 +500,13 @@ function renderCurrentItem(code, isHost, itemIndex, timerEndsAt) {
   // Timer (not for slides)
   if (!isSlide && timerEndsAt) {
     var timerEl = document.getElementById('game-' + prefix + '-timer');
-    startTimer(timerEndsAt, timerEl);
+    if (isHost) {
+      startTimer(timerEndsAt, timerEl, function() {
+        db.ref('rooms/' + code).update({ state: 'reveal' });
+      });
+    } else {
+      startTimer(timerEndsAt, timerEl);
+    }
     timerEl.style.display = '';
   } else if (isSlide) {
     document.getElementById('game-' + prefix + '-timer').style.display = 'none';
@@ -550,7 +559,7 @@ function renderMedia(media, containerId) {
 }
 
 // ─── Timer ──────────────────────────────────────────────────────────
-function startTimer(endsAt, displayEl) {
+function startTimer(endsAt, displayEl, onExpire) {
   if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
   function tick() {
     var remaining = Math.max(0, Math.floor((endsAt - Date.now()) / 1000));
@@ -560,6 +569,7 @@ function startTimer(endsAt, displayEl) {
     if (remaining <= 0) {
       clearInterval(timerInterval);
       timerInterval = null;
+      if (onExpire) onExpire();
     }
   }
   tick();
