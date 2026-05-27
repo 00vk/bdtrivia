@@ -1,6 +1,6 @@
 # bdtrivia — AI Agent Pipeline Scaffold
 
-This repo defines AI agent configs for OpenCode (`.opencode/`) and Claude Code (`.claude/`), plus the application source for a browser multiplayer trivia game.
+This repo defines AI agent configs for OpenCode (`.opencode/`), plus the application source for a browser multiplayer trivia game.
 
 ## Pipeline
 
@@ -20,10 +20,6 @@ Four-phase feature workflow, all state in `.artifacts/<feature>/state.json`:
 - `plan-conformance-reviewer` — scope creep, missing files, test coverage vs plan
 - `code-quality-reviewer` — formatting, naming, complexity, dead code, error handling
 - `research-worker` — facts-only codebase trawl (used by phase 1)
-
-## Dual Tooling
-
-Both `.opencode/` and `.claude/` define the same pipeline. `.claude/` files are the authoritative originals (more detailed). Keep both in sync when updating.
 
 ## Artifacts
 
