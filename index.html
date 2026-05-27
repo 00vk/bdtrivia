@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BdTrivia</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+#app { width: 100%; max-width: 480px; height: 100vh; max-height: 800px; padding: 24px; }
+.screen { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; gap: 16px; }
+.screen.active { display: flex; }
+h1 { font-size: 2.2em; font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.4em; font-weight: 600; }
+p { font-size: 0.95em; opacity: 0.85; line-height: 1.4; }
+input[type="text"] {
+  width: 100%; max-width: 320px; padding: 14px 18px; border: none; border-radius: 12px;
+  font-size: 1.1em; text-align: center; background: rgba(255,255,255,0.15); color: #fff;
+  outline: 2px solid transparent; transition: outline 0.2s;
+}
+input[type="text"]::placeholder { color: rgba(255,255,255,0.5); }
+input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
+.btn {
+  padding: 14px 36px; border: none; border-radius: 12px; font-size: 1.1em; font-weight: 700;
+  cursor: pointer; transition: transform 0.15s, opacity 0.15s; min-width: 200px;
+}
+.btn:active { transform: scale(0.96); }
+.btn-primary { background: #fff; color: #667eea; }
+.btn-secondary { background: rgba(255,255,255,0.18); color: #fff; }
+.room-code {
+  font-size: 3em; font-weight: 800; letter-spacing: 0.15em;
+  background: rgba(255,255,255,0.12); padding: 16px 32px; border-radius: 16px;
+  font-family: 'Courier New', monospace; user-select: all;
+}
+#player-list { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.player-chip {
+  background: rgba(255,255,255,0.1); padding: 10px 16px; border-radius: 10px;
+  font-size: 1em; display: flex; align-items: center; gap: 10px;
+}
+.player-chip::before { content: '👤'; font-size: 1.2em; }
+.waiting { font-size: 0.9em; opacity: 0.6; margin-top: 8px; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 0.3; } }
+.error { color: #ffb3b3; font-size: 0.9em; background: rgba(255,0,0,0.1); padding: 8px 16px; border-radius: 8px; width: 100%; max-width: 320px; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Host: enter nickname -->
+  <div id="screen-host-nickname" class="screen active">
+    <h1>BdTrivia</h1>
+    <p>Создайте викторину для друзей</p>
+    <input type="text" id="host-nickname-input" placeholder="Ваше имя" maxlength="20" autocomplete="off">
+    <button class="btn btn-primary" id="host-create-btn">Создать комнату</button>
+    <div id="host-create-error" class="error hidden"></div>
+  </div>
+
+  <!-- Host: lobby -->
+  <div id="screen-lobby-host" class="screen">
+    <h2>Комната создана!</h2>
+    <div class="room-code" id="room-code-display">----</div>
+    <p>Введите этот код на телефоне</p>
+    <div id="player-list"><p class="waiting">Ожидаем игроков...</p></div>
+  </div>
+
+  <!-- Player: enter room code -->
+  <div id="screen-player-roomcode" class="screen">
+    <h2>Присоединиться к игре</h2>
+    <input type="text" id="player-code-input" placeholder="Код комнаты" maxlength="6" autocomplete="off">
+    <button class="btn btn-primary" id="player-join-code-btn">Далее</button>
+    <div id="player-code-error" class="error hidden"></div>
+  </div>
+
+  <!-- Player: enter nickname -->
+  <div id="screen-player-nickname" class="screen">
+    <h2>Ваше имя</h2>
+    <input type="text" id="player-nickname-input" placeholder="Никнейм" maxlength="20" autocomplete="off">
+    <button class="btn btn-primary" id="player-join-btn">Присоединиться</button>
+    <div id="player-join-error" class="error hidden"></div>
+  </div>
+
+  <!-- Player: lobby -->
+  <div id="screen-lobby-player" class="screen">
+    <h2>Вы в игре!</h2>
+    <p>Ожидаем, пока ведущий начнёт...</p>
+    <div class="waiting" style="font-size:2em;margin-top:16px;">⏳</div>
+  </div>
+
+</div>
+
+<script>
+// ─── Firebase Config ───────────────────────────────────────────────
+// Replace with your own Firebase project config:
+// https://console.firebase.google.com/project/_/settings/general/
+var firebaseConfig = {
+  apiKey: "AIzaSyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  authDomain: "your-project.firebaseapp.com",
+  databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+  projectId: "your-project",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "1:000000000000:web:aaaaaaaaaaaaaaaaaaaaaa"
+};
+
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+
+// ─── Constants ─────────────────────────────────────────────────────
+var ROOM_CODE_LENGTH = 4;
+var CHARSET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+// ─── State ─────────────────────────────────────────────────────────
+var currentRoomCode = null;
+var currentPlayerId = null;
+
+// ─── Screen Management ─────────────────────────────────────────────
+function showScreen(id) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) {
+    screens[i].classList.remove('active');
+  }
+  var el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function showError(el, msg) {
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function hideError(el) {
+  el.classList.add('hidden');
+}
+
+// ─── Room Code Generation ──────────────────────────────────────────
+function generateRoomCode(length) {
+  var code = '';
+  for (var i = 0; i < length; i++) {
+    code += CHARSET.charAt(Math.floor(Math.random() * CHARSET.length));
+  }
+  return code;
+}
+
+function createUniqueRoomCode() {
+  return new Promise(function(resolve, reject) {
+    var attempts = 0;
+    function tryGenerate() {
+      if (attempts >= 20) {
+        reject(new Error('Could not generate unique room code'));
+        return;
+      }
+      attempts++;
+      var code = generateRoomCode(ROOM_CODE_LENGTH);
+      db.ref('rooms/' + code).once('value').then(function(snapshot) {
+        if (!snapshot.exists()) {
+          resolve(code);
+        } else {
+          tryGenerate();
+        }
+      }).catch(reject);
+    }
+    tryGenerate();
+  });
+}
+
+// ─── Host: Create Room ─────────────────────────────────────────────
+var hostNicknameInput = document.getElementById('host-nickname-input');
+var hostCreateBtn = document.getElementById('host-create-btn');
+var hostCreateError = document.getElementById('host-create-error');
+
+hostCreateBtn.addEventListener('click', function() {
+  var nickname = hostNicknameInput.value.trim();
+  if (!nickname) {
+    showError(hostCreateError, 'Введите ваше имя');
+    return;
+  }
+  hideError(hostCreateError);
+  hostCreateBtn.disabled = true;
+  hostCreateBtn.textContent = 'Создаём...';
+
+  createUniqueRoomCode().then(function(code) {
+    currentRoomCode = code;
+    return db.ref('rooms/' + code).set({
+      hostNickname: nickname,
+      createdAt: firebase.database.ServerValue.TIMESTAMP,
+      state: 'lobby'
+    });
+  }).then(function() {
+    document.getElementById('room-code-display').textContent = currentRoomCode;
+    showScreen('screen-lobby-host');
+    listenPlayers(currentRoomCode);
+  }).catch(function(err) {
+    showError(hostCreateError, 'Ошибка: ' + err.message);
+  }).finally(function() {
+    hostCreateBtn.disabled = false;
+    hostCreateBtn.textContent = 'Создать комнату';
+  });
+});
+
+// ─── Lobby: Realtime Player List ───────────────────────────────────
+function listenPlayers(code) {
+  var ref = db.ref('rooms/' + code + '/players');
+  var container = document.getElementById('player-list');
+
+  ref.on('child_added', function(snapshot) {
+    var p = snapshot.val();
+    var placeholder = container.querySelector('.waiting');
+    if (placeholder) placeholder.remove();
+
+    var existing = document.getElementById('player-' + snapshot.key);
+    if (!existing) {
+      var chip = document.createElement('div');
+      chip.className = 'player-chip';
+      chip.id = 'player-' + snapshot.key;
+      chip.textContent = p.nickname;
+      container.appendChild(chip);
+    }
+  });
+
+  ref.on('child_removed', function(snapshot) {
+    var chip = document.getElementById('player-' + snapshot.key);
+    if (chip) chip.remove();
+    if (container.children.length === 0) {
+      var p = document.createElement('p');
+      p.className = 'waiting';
+      p.textContent = 'Ожидаем игроков...';
+      container.appendChild(p);
+    }
+  });
+}
+
+// ─── Player: Room Code Entry ───────────────────────────────────────
+var playerCodeInput = document.getElementById('player-code-input');
+var playerJoinCodeBtn = document.getElementById('player-join-code-btn');
+var playerCodeError = document.getElementById('player-code-error');
+
+playerCodeInput.addEventListener('input', function() {
+  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+});
+
+playerJoinCodeBtn.addEventListener('click', function() {
+  var code = playerCodeInput.value.trim();
+  if (!code || code.length < 3) {
+    showError(playerCodeError, 'Введите код комнаты');
+    return;
+  }
+  hideError(playerCodeError);
+
+  db.ref('rooms/' + code).once('value').then(function(snapshot) {
+    if (!snapshot.exists()) {
+      showError(playerCodeError, 'Комната не найдена');
+      return;
+    }
+    var room = snapshot.val();
+    if (room.state !== 'lobby') {
+      showError(playerCodeError, 'Игра уже началась');
+      return;
+    }
+    currentRoomCode = code;
+    showScreen('screen-player-nickname');
+  }).catch(function(err) {
+    showError(playerCodeError, 'Ошибка: ' + err.message);
+  });
+});
+
+// ─── Player: Join Room ─────────────────────────────────────────────
+var playerNicknameInput = document.getElementById('player-nickname-input');
+var playerJoinBtn = document.getElementById('player-join-btn');
+var playerJoinError = document.getElementById('player-join-error');
+
+playerJoinBtn.addEventListener('click', function() {
+  var nickname = playerNicknameInput.value.trim();
+  if (!nickname) {
+    showError(playerJoinError, 'Введите никнейм');
+    return;
+  }
+  hideError(playerJoinError);
+  playerJoinBtn.disabled = true;
+  playerJoinBtn.textContent = 'Присоединяюсь...';
+
+  var playersRef = db.ref('rooms/' + currentRoomCode + '/players');
+  var newRef = playersRef.push();
+  newRef.set({
+    nickname: nickname,
+    score: 0,
+    connected: true
+  }).then(function() {
+    currentPlayerId = newRef.key;
+    sessionStorage.setItem('bdtrivia_playerId', currentPlayerId);
+    sessionStorage.setItem('bdtrivia_room', currentRoomCode);
+    showScreen('screen-lobby-player');
+    playersRef.child(currentPlayerId).onDisconnect().update({ connected: false });
+  }).catch(function(err) {
+    showError(playerJoinError, 'Ошибка: ' + err.message);
+  }).finally(function() {
+    playerJoinBtn.disabled = false;
+    playerJoinBtn.textContent = 'Присоединиться';
+  });
+});
+
+// ─── Initial Screen ────────────────────────────────────────────────
+var params = new URLSearchParams(window.location.search);
+var roomFromUrl = params.get('room');
+
+if (roomFromUrl) {
+  currentRoomCode = roomFromUrl.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!currentRoomCode) { showScreen('screen-player-roomcode'); return; }
+  db.ref('rooms/' + currentRoomCode).once('value').then(function(snapshot) {
+    if (snapshot.exists()) {
+      showScreen('screen-player-nickname');
+    } else {
+      showScreen('screen-player-roomcode');
+    }
+  }).catch(function(err) {
+    console.error('Room lookup failed:', err);
+    showScreen('screen-player-roomcode');
+  });
+}
+</script>
+</body>
+</html>
