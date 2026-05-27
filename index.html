@@ -422,6 +422,9 @@ function listenGameState(code, isHost) {
     } else if (state === 'reveal') {
       showScreen(isHost ? 'screen-game-host' : 'screen-game-player');
       showReveal(code, isHost);
+    } else if (state === 'finished') {
+      showScreen(isHost ? 'screen-game-host' : 'screen-game-player');
+      showFinished(code, isHost);
     }
   });
 
@@ -537,15 +540,34 @@ function renderCurrentItem(code, isHost, itemIndex, timerEndsAt) {
 function advanceNext(code) {
   var newIdx = (gameStateCurrentItem || 0) + 1;
   var nextItem = gameItems[newIdx];
-  if (!nextItem) return;
+  if (!nextItem) {
+    db.ref('rooms/' + code).update({ state: 'finished' });
+    return;
+  }
 
-  var update = { currentItem: newIdx };
+  var update = { currentItem: newIdx, state: 'playing' };
   if (nextItem.type === 'question') {
     update.timerEndsAt = Date.now() + (nextItem.timeLimit || 20) * 1000;
   } else {
     update.timerEndsAt = null;
   }
   db.ref('rooms/' + code).update(update);
+}
+
+// ─── Game Finished (placeholder, built out in P1.12) ────────────────
+function showFinished(code, isHost) {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (answerCountRef) { answerCountRef.off(); answerCountRef = null; }
+
+  var prefix = isHost ? 'host' : 'player';
+  document.getElementById('game-' + prefix + '-timer').style.display = 'none';
+  if (isHost) document.getElementById('game-host-answered').textContent = '';
+  document.getElementById('game-' + prefix + '-round').textContent = '';
+  document.getElementById('game-' + prefix + '-progress').textContent = 'Игра завершена!';
+  document.getElementById('game-' + prefix + '-question').textContent = '';
+
+  var opts = document.getElementById('game-' + prefix + '-options');
+  opts.innerHTML = '<p class="waiting">Подводим итоги...</p>';
 }
 
 // ─── Media Renderer ─────────────────────────────────────────────────
