@@ -60,15 +60,10 @@ export function renderEditorItems() {
     var icon = item.type === 'slide' ? '📄' : (item.questionType === 'text' ? '✏️' : '📝');
     var preview = item.type === 'slide' ? (item.title || 'Слайд') : (item.question || 'Вопрос');
     summary.innerHTML =
+      '<span class="editor-card-grip">⠿</span>' +
       '<span class="editor-card-icon">' + icon + '</span>' +
-      '<span class="editor-card-preview">' + escapeHtml(preview) + '</span>' +
-      '<span class="editor-card-actions">' +
-        '<button data-action="move-up" data-i="' + i + '" ' + (i === 0 ? 'disabled style="opacity:0.3"' : '') + '>↑</button>' +
-        '<button data-action="move-down" data-i="' + i + '" ' + (i === state.draftItems.length - 1 ? 'disabled style="opacity:0.3"' : '') + '>↓</button>' +
-        '<button data-action="delete" data-i="' + i + '" style="color:#ff8888;">✕</button>' +
-      '</span>';
+      '<span class="editor-card-preview">' + escapeHtml(preview) + '</span>';
     summary.addEventListener('click', function(e) {
-      if (e.target.closest('.editor-card-actions')) return;
       state.editorExpandedIdx = state.editorExpandedIdx === i ? -1 : i;
       renderEditorItems();
     });
@@ -102,14 +97,17 @@ function buildEditorForm(form, item, index) {
 
     if (item.questionType === 'choice') {
       var optsHtml = '<label>Варианты ответов</label>';
+      optsHtml += '<div class="editor-opt-list">';
       (item.options || ['', '', '', '']).forEach(function(opt, oi) {
         optsHtml +=
           '<div class="editor-opt-row">' +
+            '<span class="editor-opt-grip">⠿</span>' +
             '<input class="f-opt" value="' + escapeHtml(opt) + '" placeholder="Вариант ' + (oi + 1) + '">' +
             '<input class="opt-correct" type="radio" name="correct-' + index + '" value="' + oi + '" ' + (item.correctAnswer === opt ? 'checked' : '') + '>' +
             (item.options.length > 2 ? '<button class="opt-remove" data-oi="' + oi + '">×</button>' : '') +
           '</div>';
       });
+      optsHtml += '</div>';
       optsHtml += '<button class="editor-btn-sm" id="add-opt-' + index + '" ' + (item.options.length >= 6 ? 'disabled style="opacity:0.4"' : '') + '>+ Вариант</button>';
       form.innerHTML += optsHtml;
       form.querySelector('.f-question').dataset.type = 'choice';
@@ -138,6 +136,7 @@ function buildEditorForm(form, item, index) {
 
   form.innerHTML +=
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">' +
+      '<button class="editor-btn-delete" data-action="delete" data-i="' + index + '" style="margin-right:auto;">✕ Удалить</button>' +
       '<button class="editor-btn-cancel" data-action="cancel">Отмена</button>' +
       '<button class="editor-btn-save" data-action="save">Сохранить</button>' +
     '</div>';
@@ -171,6 +170,28 @@ function buildEditorForm(form, item, index) {
         state.draftItems[index].options.push('');
         renderEditorItems();
         setExpanded(index);
+      }
+    });
+  }
+
+  var optList = form.querySelector('.editor-opt-list');
+  if (optList) {
+    Sortable.create(optList, {
+      handle: '.editor-opt-grip',
+      animation: 150,
+      onEnd: function(evt) {
+        setTimeout(function() {
+          var rows = evt.from.querySelectorAll('.editor-opt-row');
+          var opts = [];
+          rows.forEach(function(row) {
+            var inp = row.querySelector('.f-opt');
+            if (inp) opts.push(inp.value);
+          });
+          state.draftItems[index].options = opts;
+          saveDraft();
+          renderEditorItems();
+          setExpanded(index);
+        }, 0);
       }
     });
   }
@@ -229,31 +250,36 @@ function deleteItem(index) {
   renderEditorItems();
 }
 
-function moveItem(index, direction) {
-  var newIdx = index + direction;
-  if (newIdx < 0 || newIdx >= state.draftItems.length) return;
-  var tmp = state.draftItems[index];
-  state.draftItems[index] = state.draftItems[newIdx];
-  state.draftItems[newIdx] = tmp;
-  if (state.editorExpandedIdx === index) state.editorExpandedIdx = newIdx;
-  else if (state.editorExpandedIdx === newIdx) state.editorExpandedIdx = index;
-  saveDraft();
-  renderEditorItems();
-}
-
 function setExpanded(idx) {
   state.editorExpandedIdx = idx;
 }
 
 export function initEditor() {
-  document.getElementById('editor-list').addEventListener('click', function(e) {
+  var editorList = document.getElementById('editor-list');
+  editorList.addEventListener('click', function(e) {
     var btn = e.target.closest('[data-action]');
     if (!btn) return;
     var i = parseInt(btn.dataset.i);
     var action = btn.dataset.action;
     if (action === 'delete') deleteItem(i);
-    else if (action === 'move-up') moveItem(i, -1);
-    else if (action === 'move-down') moveItem(i, 1);
+  });
+
+  Sortable.create(editorList, {
+    handle: '.editor-card-summary',
+    animation: 200,
+    onEnd: function() {
+      var cards = editorList.querySelectorAll('.editor-card');
+      var oldItems = state.draftItems.slice();
+      var newExpandedIdx = -1;
+      for (var ci = 0; ci < cards.length; ci++) {
+        var oldIdx = parseInt(cards[ci].querySelector('.editor-card-form').dataset.index);
+        state.draftItems[ci] = oldItems[oldIdx];
+        if (oldIdx === state.editorExpandedIdx) newExpandedIdx = ci;
+      }
+      state.editorExpandedIdx = newExpandedIdx;
+      saveDraft();
+      renderEditorItems();
+    }
   });
 
   document.getElementById('editor-add-choice').addEventListener('click', function() {
