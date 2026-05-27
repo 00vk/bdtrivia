@@ -324,7 +324,10 @@ hostStartBtn.addEventListener('click', function() {
     var gameData = getSampleGameData();
     gameData.state = 'playing';
     gameData.currentItem = 0;
-    gameData.timerEndsAt = Date.now() + gameData.items[0].timeLimit * 1000;
+    var firstItem = gameData.items[0];
+    gameData.timerEndsAt = firstItem && firstItem.type === 'question'
+      ? Date.now() + (firstItem.timeLimit || 20) * 1000
+      : null;
     return db.ref('rooms/' + currentRoomCode).update(gameData);
   }).catch(function(err) {
     showError(hostStartError, 'Ошибка: ' + err.message);
@@ -338,6 +341,11 @@ function getSampleGameData() {
   return {
     items: [
       {
+        type: 'slide',
+        title: 'Раунд 1: История',
+        description: 'Вопросы по истории Древнего мира. Удачи!'
+      },
+      {
         type: 'question',
         questionType: 'choice',
         question: 'В каком году пал Западный Рим?',
@@ -347,6 +355,11 @@ function getSampleGameData() {
         maxScore: 1000,
         timeLimit: 20,
         roundName: 'История'
+      },
+      {
+        type: 'slide',
+        title: 'Раунд 2: Космос и География',
+        description: 'От планет до столиц — проверьте свою эрудицию!'
       },
       {
         type: 'question',
@@ -376,6 +389,7 @@ function getSampleGameData() {
 // ─── Game State ─────────────────────────────────────────────────────
 var gameItems = null;
 var gameItemCount = 0;
+var gameStateCurrentItem = 0;
 var timerInterval = null;
 var answerCountRef = null;
 
@@ -390,6 +404,7 @@ function listenGameState(code, isHost) {
         var room = snap.val();
         gameItems = room.items || [];
         gameItemCount = gameItems.length;
+        gameStateCurrentItem = room.currentItem;
         showScreen(isHost ? 'screen-game-host' : 'screen-game-player');
         renderCurrentItem(code, isHost, room.currentItem, room.timerEndsAt);
       });
@@ -399,6 +414,7 @@ function listenGameState(code, isHost) {
   roomRef.child('currentItem').on('value', function(snapshot) {
     var idx = snapshot.val();
     if (idx !== null && gameItems) {
+      gameStateCurrentItem = idx;
       roomRef.child('timerEndsAt').once('value', function(timerSnap) {
         renderCurrentItem(code, isHost, idx, timerSnap.val());
       });
@@ -415,17 +431,34 @@ function renderCurrentItem(code, isHost, itemIndex, timerEndsAt) {
   if (!item) return;
 
   var prefix = isHost ? 'host' : 'player';
+  var isSlide = item.type === 'slide';
 
-  document.getElementById('game-' + prefix + '-round').textContent = item.roundName || '';
-  document.getElementById('game-' + prefix + '-progress').textContent = 'Вопрос ' + (itemIndex + 1) + ' / ' + gameItemCount;
-  document.getElementById('game-' + prefix + '-question').textContent = item.question;
+  if (isSlide) {
+    document.getElementById('game-' + prefix + '-round').textContent = item.title || '';
+    document.getElementById('game-' + prefix + '-progress').textContent = 'Слайд ' + (itemIndex + 1) + ' / ' + gameItemCount;
+    document.getElementById('game-' + prefix + '-question').textContent = item.description || '';
+  } else {
+    document.getElementById('game-' + prefix + '-round').textContent = item.roundName || '';
+    document.getElementById('game-' + prefix + '-progress').textContent = 'Вопрос ' + (itemIndex + 1) + ' / ' + gameItemCount;
+    document.getElementById('game-' + prefix + '-question').textContent = item.question;
+  }
 
   renderMedia(item.media, 'game-' + prefix + '-media');
 
   var optsContainer = document.getElementById('game-' + prefix + '-options');
   optsContainer.innerHTML = '';
 
-  if (item.questionType === 'choice' && item.options) {
+  if (isSlide) {
+    if (isHost) {
+      var nextBtn = document.createElement('button');
+      nextBtn.className = 'btn btn-primary';
+      nextBtn.textContent = 'Далее →';
+      nextBtn.addEventListener('click', function() {
+        advanceNext(code);
+      });
+      optsContainer.appendChild(nextBtn);
+    }
+  } else if (item.questionType === 'choice' && item.options) {
     item.options.forEach(function(opt) {
       var btn = document.createElement('button');
       btn.className = 'opt-btn';
@@ -461,15 +494,36 @@ function renderCurrentItem(code, isHost, itemIndex, timerEndsAt) {
     }
   }
 
-  // Timer
-  if (timerEndsAt) {
-    startTimer(timerEndsAt, document.getElementById('game-' + prefix + '-timer'));
+  // Timer (not for slides)
+  if (!isSlide && timerEndsAt) {
+    var timerEl = document.getElementById('game-' + prefix + '-timer');
+    startTimer(timerEndsAt, timerEl);
+    timerEl.style.display = '';
+  } else if (isSlide) {
+    document.getElementById('game-' + prefix + '-timer').style.display = 'none';
   }
 
-  // Host: answer count
-  if (isHost) {
+  // Host: answer count (not for slides)
+  if (isHost && !isSlide) {
     listenAnswerCount(code, itemIndex);
+  } else if (isHost) {
+    document.getElementById('game-host-answered').textContent = '';
   }
+}
+
+// ─── Host: Advance to Next Item ─────────────────────────────────────
+function advanceNext(code) {
+  var newIdx = (gameStateCurrentItem || 0) + 1;
+  var nextItem = gameItems[newIdx];
+  if (!nextItem) return;
+
+  var update = { currentItem: newIdx };
+  if (nextItem.type === 'question') {
+    update.timerEndsAt = Date.now() + (nextItem.timeLimit || 20) * 1000;
+  } else {
+    update.timerEndsAt = null;
+  }
+  db.ref('rooms/' + code).update(update);
 }
 
 // ─── Media Renderer ─────────────────────────────────────────────────
