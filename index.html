@@ -99,6 +99,29 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
 .rank-pos { min-width: 28px; opacity: 0.7; }
 .rank-name { flex: 1; text-align: left; margin-left: 8px; }
 .rank-score { font-weight: 600; }
+#editor-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 6px; margin: 4px 0; max-height: 55vh; overflow-y: auto; }
+.editor-card { background: rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; }
+.editor-card-summary { display: flex; align-items: center; gap: 8px; padding: 10px 12px; cursor: pointer; user-select: none; }
+.editor-card-summary:hover { background: rgba(255,255,255,0.05); }
+.editor-card-icon { font-size: 1.2em; width: 28px; text-align: center; flex-shrink: 0; }
+.editor-card-preview { flex: 1; text-align: left; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.editor-card-actions button { background: none; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; padding: 2px 6px; font-size: 0.8em; cursor: pointer; }
+.editor-card-actions button:hover { background: rgba(255,255,255,0.15); }
+.editor-card-form { display: none; flex-direction: column; gap: 8px; padding: 8px 12px 12px; border-top: 1px solid rgba(255,255,255,0.1); }
+.editor-card-form.open { display: flex; }
+.editor-card-form label { font-size: 0.85em; opacity: 0.8; text-align: left; }
+.editor-card-form input, .editor-card-form textarea, .editor-card-form select { width: 100%; padding: 10px 12px; border: none; border-radius: 8px; font-size: 0.95em; background: rgba(255,255,255,0.12); color: #fff; font-family: inherit; }
+.editor-card-form textarea { resize: vertical; min-height: 50px; }
+.editor-card-form input::placeholder, .editor-card-form textarea::placeholder { color: rgba(255,255,255,0.4); }
+.editor-opt-row { display: flex; gap: 6px; align-items: center; }
+.editor-opt-row input { flex: 1; }
+.editor-opt-row .opt-correct { flex-shrink: 0; }
+.editor-opt-row .opt-remove { background: none; border: none; color: #ff8888; cursor: pointer; font-size: 1.1em; padding: 0 4px; }
+.editor-btn-sm { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; background: rgba(255,255,255,0.08); color: #fff; font-size: 0.85em; cursor: pointer; }
+.editor-btn-sm:hover { background: rgba(255,255,255,0.18); }
+.editor-btn-save { background: #4caf50; border: none; color: #fff; padding: 8px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95em; }
+.editor-btn-cancel { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.95em; }
 </style>
 </head>
 <body>
@@ -120,7 +143,21 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
     <p>Введите этот код на телефоне</p>
     <div id="player-list"><p class="waiting">Ожидаем игроков...</p></div>
     <button class="btn btn-primary" id="host-start-btn" style="margin-top:8px" disabled>Начать игру</button>
+    <button class="btn btn-secondary" id="host-edit-btn" style="margin-top:4px;">Редактировать вопросы</button>
     <div id="host-start-error" class="error hidden"></div>
+  </div>
+
+  <!-- Host: question editor -->
+  <div id="screen-editor" class="screen">
+    <h2>Редактор вопросов</h2>
+    <div id="editor-list"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:100%;max-width:360px;">
+      <button class="editor-btn-sm" id="editor-add-choice">+ Вопрос (выбор)</button>
+      <button class="editor-btn-sm" id="editor-add-text">+ Вопрос (текст)</button>
+      <button class="editor-btn-sm" id="editor-add-slide">+ Слайд</button>
+    </div>
+    <div id="editor-error" class="error hidden"></div>
+    <button class="btn btn-secondary" id="editor-back-btn" style="margin-top:8px;">← Назад в лобби</button>
   </div>
 
   <!-- Host: game in progress (question display) -->
@@ -319,6 +356,13 @@ function listenPlayers(code) {
   });
 }
 
+// ─── Host: Edit Questions Button ────────────────────────────────────
+document.getElementById('host-edit-btn').addEventListener('click', function() {
+  loadDraft();
+  renderEditorItems();
+  showScreen('screen-editor');
+});
+
 // Enable start button only when players are connected
 function updateStartButton() {
   var btn = document.getElementById('host-start-btn');
@@ -349,10 +393,11 @@ hostStartBtn.addEventListener('click', function() {
     if (snap.val() !== storedKey) {
       throw new Error('Только ведущий может запустить игру');
     }
-    var gameData = getSampleGameData();
+    var startItems = getGameItems();
+    var gameData = { items: startItems };
     gameData.state = 'playing';
     gameData.currentItem = 0;
-    var firstItem = gameData.items[0];
+    var firstItem = startItems[0];
     gameData.timerEndsAt = firstItem && firstItem.type === 'question'
       ? Date.now() + (firstItem.timeLimit || 20) * 1000
       : null;
@@ -364,54 +409,26 @@ hostStartBtn.addEventListener('click', function() {
   });
 });
 
-// ─── Sample Game Data (no editor yet — P2) ──────────────────────────
-function getSampleGameData() {
-  return {
-    items: [
-      {
-        type: 'slide',
-        title: 'Раунд 1: История',
-        description: 'Вопросы по истории Древнего мира. Удачи!'
-      },
-      {
-        type: 'question',
-        questionType: 'choice',
-        question: 'В каком году пал Западный Рим?',
-        media: null,
-        options: ['395', '476', '410', '1453'],
-        correctAnswer: '476',
-        maxScore: 1000,
-        timeLimit: 20,
-        roundName: 'История'
-      },
-      {
-        type: 'slide',
-        title: 'Раунд 2: Космос и География',
-        description: 'От планет до столиц — проверьте свою эрудицию!'
-      },
-      {
-        type: 'question',
-        questionType: 'choice',
-        question: 'Какая планета самая большая в Солнечной системе?',
-        media: null,
-        options: ['Сатурн', 'Юпитер', 'Нептун', 'Уран'],
-        correctAnswer: 'Юпитер',
-        maxScore: 1000,
-        timeLimit: 20,
-        roundName: 'Космос'
-      },
-      {
-        type: 'question',
-        questionType: 'text',
-        question: 'Назовите столицу Австралии',
-        media: null,
-        correctAnswer: ['Канберра', 'Canberra'],
-        maxScore: 2000,
-        timeLimit: 30,
-        roundName: 'География'
-      }
-    ]
-  };
+// ─── Get Game Items (draft if available, else sample) ────────────────
+function getGameItems() {
+  var saved = localStorage.getItem('bdtrivia_draft');
+  if (saved) {
+    try {
+      var items = JSON.parse(saved);
+      if (items.length > 0) return items;
+    } catch(e) {}
+  }
+  return getSampleItems();
+}
+
+function getSampleItems() {
+  return [
+    { type: 'slide', title: 'Раунд 1: История', description: 'Вопросы по истории Древнего мира. Удачи!' },
+    { type: 'question', questionType: 'choice', question: 'В каком году пал Западный Рим?', media: null, options: ['395', '476', '410', '1453'], correctAnswer: '476', maxScore: 1000, timeLimit: 20, roundName: 'История' },
+    { type: 'slide', title: 'Раунд 2: Космос и География', description: 'От планет до столиц — проверьте свою эрудицию!' },
+    { type: 'question', questionType: 'choice', question: 'Какая планета самая большая в Солнечной системе?', media: null, options: ['Сатурн', 'Юпитер', 'Нептун', 'Уран'], correctAnswer: 'Юпитер', maxScore: 1000, timeLimit: 20, roundName: 'Космос' },
+    { type: 'question', questionType: 'text', question: 'Назовите столицу Австралии', media: null, correctAnswer: ['Канберра', 'Canberra'], maxScore: 2000, timeLimit: 30, roundName: 'География' }
+  ];
 }
 
 // ─── Game State ─────────────────────────────────────────────────────
@@ -880,6 +897,264 @@ function escapeHtml(str) {
   div.appendChild(document.createTextNode(str || ''));
   return div.innerHTML;
 }
+
+// ─── Question Editor ────────────────────────────────────────────────
+var draftItems = [];
+var editorExpandedIdx = -1;
+
+function loadDraft() {
+  var saved = localStorage.getItem('bdtrivia_draft');
+  if (saved) {
+    try { draftItems = JSON.parse(saved); return; } catch(e) {}
+  }
+  // Fall back to sample data
+  draftItems = JSON.parse(JSON.stringify(getSampleItems()));
+}
+
+function saveDraft() {
+  localStorage.setItem('bdtrivia_draft', JSON.stringify(draftItems));
+}
+
+function renderEditorItems() {
+  var list = document.getElementById('editor-list');
+  list.innerHTML = '';
+  if (draftItems.length === 0) {
+    list.innerHTML = '<p class="waiting" style="margin:16px 0;">Нет вопросов. Добавьте первый!</p>';
+    return;
+  }
+  draftItems.forEach(function(item, i) {
+    var isExpanded = editorExpandedIdx === i;
+    var card = document.createElement('div');
+    card.className = 'editor-card';
+
+    // Summary
+    var summary = document.createElement('div');
+    summary.className = 'editor-card-summary';
+    var icon = item.type === 'slide' ? '📄' : (item.questionType === 'text' ? '✏️' : '📝');
+    var preview = item.type === 'slide' ? (item.title || 'Слайд') : (item.question || 'Вопрос');
+    summary.innerHTML =
+      '<span class="editor-card-icon">' + icon + '</span>' +
+      '<span class="editor-card-preview">' + escapeHtml(preview) + '</span>' +
+      '<span class="editor-card-actions">' +
+        '<button data-action="move-up" data-i="' + i + '" ' + (i === 0 ? 'disabled style="opacity:0.3"' : '') + '>↑</button>' +
+        '<button data-action="move-down" data-i="' + i + '" ' + (i === draftItems.length - 1 ? 'disabled style="opacity:0.3"' : '') + '>↓</button>' +
+        '<button data-action="delete" data-i="' + i + '" style="color:#ff8888;">✕</button>' +
+      '</span>';
+    summary.addEventListener('click', function(e) {
+      if (e.target.closest('.editor-card-actions')) return;
+      editorExpandedIdx = editorExpandedIdx === i ? -1 : i;
+      renderEditorItems();
+    });
+    card.appendChild(summary);
+
+    // Edit form
+    var form = document.createElement('div');
+    form.className = 'editor-card-form' + (isExpanded ? ' open' : '');
+    form.dataset.index = i;
+    if (isExpanded) {
+      buildEditorForm(form, item, i);
+    }
+    card.appendChild(form);
+    list.appendChild(card);
+  });
+}
+
+function buildEditorForm(form, item, index) {
+  if (item.type === 'slide') {
+    form.innerHTML =
+      '<label>Заголовок</label><input class="f-title" value="' + escapeHtml(item.title || '') + '" placeholder="Раунд 1: История">' +
+      '<label>Описание</label><textarea class="f-desc" placeholder="Правила раунда">' + escapeHtml(item.description || '') + '</textarea>';
+  } else {
+    var typeLabel = item.questionType === 'text' ? 'Свободный текст' : 'Выбор одного';
+    form.innerHTML =
+      '<label>Вопрос</label><textarea class="f-question" placeholder="Текст вопроса">' + escapeHtml(item.question || '') + '</textarea>' +
+      '<label>Раунд</label><input class="f-round" value="' + escapeHtml(item.roundName || '') + '" placeholder="Название раунда">' +
+      '<div style="display:flex;gap:8px;">' +
+        '<div style="flex:1;"><label>Лимит (сек)</label><input class="f-timelimit" type="number" value="' + (item.timeLimit || 20) + '" min="5" max="120" step="5"></div>' +
+        '<div style="flex:1;"><label>MAX баллов</label><input class="f-maxscore" type="number" value="' + (item.maxScore || 1000) + '" min="100" max="10000" step="100"></div>' +
+      '</div>';
+
+    if (item.questionType === 'choice') {
+      var optsHtml = '<label>Варианты ответов</label>';
+      (item.options || ['', '', '', '']).forEach(function(opt, oi) {
+        optsHtml +=
+          '<div class="editor-opt-row">' +
+            '<input class="f-opt" value="' + escapeHtml(opt) + '" placeholder="Вариант ' + (oi + 1) + '">' +
+            '<input class="opt-correct" type="radio" name="correct-' + index + '" value="' + oi + '" ' + (item.correctAnswer === opt ? 'checked' : '') + '>' +
+            (item.options.length > 2 ? '<button class="opt-remove" data-oi="' + oi + '">×</button>' : '') +
+          '</div>';
+      });
+      optsHtml += '<button class="editor-btn-sm" id="add-opt-' + index + '" ' + (item.options.length >= 6 ? 'disabled style="opacity:0.4"' : '') + '>+ Вариант</button>';
+      form.innerHTML += optsHtml;
+      form.querySelector('.f-question').dataset.type = 'choice';
+    } else {
+      var correctVal = Array.isArray(item.correctAnswer) ? item.correctAnswer.join(', ') : (item.correctAnswer || '');
+      form.innerHTML +=
+        '<label>Правильный ответ (синонимы через запятую)</label><input class="f-correct-text" value="' + escapeHtml(correctVal) + '" placeholder="Канберра, Canberra">';
+    }
+  }
+
+  // Media
+  var media = item.media || {};
+  form.innerHTML +=
+    '<label>Медиа (необязательно)</label>' +
+    '<div style="display:flex;gap:6px;">' +
+      '<select class="f-media-type" style="flex:0 0 auto;width:auto;padding:8px;border:none;border-radius:8px;background:rgba(255,255,255,0.12);color:#fff;">' +
+        '<option value="">Нет</option>' +
+        '<option value="youtube" ' + (media.type === 'youtube' ? 'selected' : '') + '>YouTube</option>' +
+        '<option value="image" ' + (media.type === 'image' ? 'selected' : '') + '>Картинка</option>' +
+        '<option value="audio" ' + (media.type === 'audio' ? 'selected' : '') + '>Аудио</option>' +
+      '</select>' +
+      '<input class="f-media-url" style="flex:1;" value="' + escapeHtml(media.url || '') + '" placeholder="URL медиа">' +
+    '</div>';
+
+  // Buttons
+  form.innerHTML +=
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">' +
+      '<button class="editor-btn-cancel" data-action="cancel">Отмена</button>' +
+      '<button class="editor-btn-save" data-action="save">Сохранить</button>' +
+    '</div>';
+
+  // Event delegation for save/cancel
+  form.addEventListener('click', function(e) {
+    var action = e.target.dataset.action;
+    if (action === 'cancel') {
+      editorExpandedIdx = -1;
+      renderEditorItems();
+    } else if (action === 'save') {
+      saveEditorItem(index);
+    } else if (e.target.classList.contains('opt-remove')) {
+      var oi = parseInt(e.target.dataset.oi);
+      if (draftItems[index].options.length > 2) {
+        draftItems[index].options.splice(oi, 1);
+        if (draftItems[index].correctAnswer === draftItems[index].options[oi]) {
+          draftItems[index].correctAnswer = draftItems[index].options[0] || '';
+        }
+        renderEditorItems();
+        setExpanded(index);
+      }
+    }
+  });
+
+  // Add option button
+  var addOptBtn = form.querySelector('#add-opt-' + index);
+  if (addOptBtn) {
+    addOptBtn.addEventListener('click', function() {
+      if (draftItems[index].options.length < 6) {
+        draftItems[index].options.push('');
+        renderEditorItems();
+        setExpanded(index);
+      }
+    });
+  }
+}
+
+function setExpanded(idx) {
+  editorExpandedIdx = idx;
+}
+
+function saveEditorItem(index) {
+  var form = document.querySelector('.editor-card-form.open');
+  if (!form) return;
+
+  var item = draftItems[index];
+  if (item.type === 'slide') {
+    item.title = form.querySelector('.f-title').value.trim();
+    item.description = form.querySelector('.f-desc').value.trim();
+    if (!item.title) { showError(document.getElementById('editor-error'), 'Заголовок слайда обязателен'); return; }
+  } else {
+    item.question = form.querySelector('.f-question').value.trim();
+    item.roundName = form.querySelector('.f-round').value.trim();
+    item.timeLimit = parseInt(form.querySelector('.f-timelimit').value) || 20;
+    item.maxScore = parseInt(form.querySelector('.f-maxscore').value) || 1000;
+
+    if (!item.question) { showError(document.getElementById('editor-error'), 'Вопрос не может быть пустым'); return; }
+
+    if (item.questionType === 'choice') {
+      var optInputs = form.querySelectorAll('.f-opt');
+      var opts = [];
+      optInputs.forEach(function(inp) { if (inp.value.trim()) opts.push(inp.value.trim()); });
+      if (opts.length < 2) { showError(document.getElementById('editor-error'), 'Нужно минимум 2 варианта ответа'); return; }
+      item.options = opts;
+      var correctRadio = form.querySelector('input[name="correct-' + index + '"]:checked');
+      if (!correctRadio) { showError(document.getElementById('editor-error'), 'Выберите правильный ответ'); return; }
+      item.correctAnswer = opts[parseInt(correctRadio.value)];
+    } else {
+      var raw = form.querySelector('.f-correct-text').value || '';
+      var syns = raw.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+      if (syns.length === 0) { showError(document.getElementById('editor-error'), 'Укажите хотя бы один правильный ответ'); return; }
+      item.correctAnswer = syns;
+    }
+
+    // Media
+    var mediaType = form.querySelector('.f-media-type').value;
+    var mediaUrl = form.querySelector('.f-media-url').value.trim();
+    item.media = mediaUrl ? { type: mediaType, url: mediaUrl } : null;
+  }
+
+  hideError(document.getElementById('editor-error'));
+  editorExpandedIdx = -1;
+  saveDraft();
+  renderEditorItems();
+}
+
+function deleteItem(index) {
+  if (!confirm('Удалить этот элемент?')) return;
+  draftItems.splice(index, 1);
+  if (editorExpandedIdx === index) editorExpandedIdx = -1;
+  else if (editorExpandedIdx > index) editorExpandedIdx--;
+  saveDraft();
+  renderEditorItems();
+}
+
+function moveItem(index, direction) {
+  var newIdx = index + direction;
+  if (newIdx < 0 || newIdx >= draftItems.length) return;
+  var tmp = draftItems[index];
+  draftItems[index] = draftItems[newIdx];
+  draftItems[newIdx] = tmp;
+  if (editorExpandedIdx === index) editorExpandedIdx = newIdx;
+  else if (editorExpandedIdx === newIdx) editorExpandedIdx = index;
+  saveDraft();
+  renderEditorItems();
+}
+
+// Editor event delegation
+document.getElementById('editor-list').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  var i = parseInt(btn.dataset.i);
+  var action = btn.dataset.action;
+  if (action === 'delete') deleteItem(i);
+  else if (action === 'move-up') moveItem(i, -1);
+  else if (action === 'move-down') moveItem(i, 1);
+});
+
+document.getElementById('editor-add-choice').addEventListener('click', function() {
+  draftItems.push({ type: 'question', questionType: 'choice', question: '', media: null, options: ['', ''], correctAnswer: '', maxScore: 1000, timeLimit: 20, roundName: '' });
+  editorExpandedIdx = draftItems.length - 1;
+  saveDraft();
+  renderEditorItems();
+});
+
+document.getElementById('editor-add-text').addEventListener('click', function() {
+  draftItems.push({ type: 'question', questionType: 'text', question: '', media: null, correctAnswer: [''], maxScore: 1000, timeLimit: 20, roundName: '' });
+  editorExpandedIdx = draftItems.length - 1;
+  saveDraft();
+  renderEditorItems();
+});
+
+document.getElementById('editor-add-slide').addEventListener('click', function() {
+  draftItems.push({ type: 'slide', title: '', description: '' });
+  editorExpandedIdx = draftItems.length - 1;
+  saveDraft();
+  renderEditorItems();
+});
+
+document.getElementById('editor-back-btn').addEventListener('click', function() {
+  hideError(document.getElementById('editor-error'));
+  showScreen('screen-lobby-host');
+});
 
 // ─── Player: Select Answer ──────────────────────────────────────────
 function selectAnswer(code, itemIndex, answer) {
