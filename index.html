@@ -83,6 +83,22 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
 .reveal-dist-label { min-width: 60px; text-align: right; flex-shrink: 0; }
 .reveal-top3 { width: 100%; max-width: 320px; text-align: left; }
 .reveal-top3-item { display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 8px; margin: 2px 0; background: rgba(255,255,255,0.06); font-size: 0.95em; }
+.podium { display: flex; justify-content: center; align-items: flex-end; gap: 8px; width: 100%; max-width: 320px; margin: 12px 0; }
+.podium-item { display: flex; flex-direction: column; align-items: center; gap: 4px; border-radius: 12px 12px 0 0; padding: 12px 16px 8px; min-width: 80px; }
+.podium-1 { background: rgba(255,215,0,0.25); font-size: 1.4em; padding-top: 20px; }
+.podium-2 { background: rgba(192,192,192,0.2); font-size: 1.15em; padding-top: 14px; }
+.podium-3 { background: rgba(205,127,50,0.2); font-size: 1em; padding-top: 10px; }
+.podium-medal { font-size: 1.5em; }
+.podium-name { font-weight: 700; text-align: center; }
+.podium-score { font-size: 0.85em; opacity: 0.8; }
+.rank-table { width: 100%; max-width: 320px; margin: 8px 0; }
+.rank-row { display: flex; justify-content: space-between; padding: 8px 12px; border-radius: 8px; margin: 2px 0; background: rgba(255,255,255,0.06); font-size: 0.95em; }
+.rank-row.top1 { background: rgba(255,215,0,0.12); }
+.rank-row.top2 { background: rgba(192,192,192,0.1); }
+.rank-row.top3 { background: rgba(205,127,50,0.1); }
+.rank-pos { min-width: 28px; opacity: 0.7; }
+.rank-name { flex: 1; text-align: left; margin-left: 8px; }
+.rank-score { font-weight: 600; }
 </style>
 </head>
 <body>
@@ -554,7 +570,7 @@ function advanceNext(code) {
   db.ref('rooms/' + code).update(update);
 }
 
-// ─── Game Finished (placeholder, built out in P1.12) ────────────────
+// ─── Game Finished ──────────────────────────────────────────────────
 function showFinished(code, isHost) {
   if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
   if (answerCountRef) { answerCountRef.off(); answerCountRef = null; }
@@ -566,8 +582,66 @@ function showFinished(code, isHost) {
   document.getElementById('game-' + prefix + '-progress').textContent = 'Игра завершена!';
   document.getElementById('game-' + prefix + '-question').textContent = '';
 
-  var opts = document.getElementById('game-' + prefix + '-options');
-  opts.innerHTML = '<p class="waiting">Подводим итоги...</p>';
+  db.ref('rooms/' + code + '/players').once('value', function(snap) {
+    var players = snap.val() || {};
+    var sorted = Object.keys(players)
+      .map(function(id) { return { id: id, nickname: players[id].nickname, score: players[id].score || 0 }; })
+      .sort(function(a, b) { return b.score - a.score; });
+
+    var opts = document.getElementById('game-' + prefix + '-options');
+    opts.innerHTML = '';
+
+    // Podium (top 3)
+    if (sorted.length > 0) {
+      var podium = document.createElement('div');
+      podium.className = 'podium';
+
+      var podiumOrder = sorted.length >= 3 ? [1, 0, 2] : (sorted.length === 2 ? [1, 0] : [0]);
+      podiumOrder.forEach(function(pi) {
+        var p = sorted[pi];
+        if (!p) return;
+        var item = document.createElement('div');
+        var cls = pi === 0 ? 'podium-1' : (pi === 1 ? 'podium-2' : 'podium-3');
+        item.className = 'podium-item ' + cls;
+        var medals = { 0: '🥇', 1: '🥈', 2: '🥉' };
+        item.innerHTML =
+          '<div class="podium-medal">' + (medals[pi] || '') + '</div>' +
+          '<div class="podium-name">' + escapeHtml(p.nickname) + '</div>' +
+          '<div class="podium-score">' + p.score + '</div>';
+        podium.appendChild(item);
+      });
+      opts.appendChild(podium);
+    }
+
+    // Full table
+    var table = document.createElement('div');
+    table.className = 'rank-table';
+    sorted.forEach(function(p, i) {
+      var row = document.createElement('div');
+      var cls = i === 0 ? 'top1' : (i === 1 ? 'top2' : (i === 2 ? 'top3' : ''));
+      row.className = 'rank-row ' + cls;
+      row.innerHTML =
+        '<span class="rank-pos">' + (i + 1) + '</span>' +
+        '<span class="rank-name">' + escapeHtml(p.nickname) + '</span>' +
+        '<span class="rank-score">' + p.score + '</span>';
+      table.appendChild(row);
+    });
+    opts.appendChild(table);
+
+    // New game button (host only)
+    if (isHost) {
+      var newBtn = document.createElement('button');
+      newBtn.className = 'btn btn-primary';
+      newBtn.textContent = 'Новая игра';
+      newBtn.addEventListener('click', function() {
+        db.ref('rooms/' + code).remove().then(function() {
+          sessionStorage.clear();
+          window.location.href = window.location.pathname;
+        });
+      });
+      opts.appendChild(newBtn);
+    }
+  });
 }
 
 // ─── Media Renderer ─────────────────────────────────────────────────
