@@ -379,6 +379,7 @@ function listenPlayers(code) {
 
 // ─── QR Code + Copy ────────────────────────────────────────────────
 function showQRCode(code) {
+  if (window.location.protocol === 'file:') { return; }
   var base = window.location.origin + window.location.pathname.replace(/\/?$/, '');
   var url = base + '?room=' + code;
   var qrContainer = document.getElementById('lobby-qr');
