@@ -6,6 +6,7 @@
 <title>BdTrivia</title>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
 <link rel="stylesheet" href="css/styles.css">
 <script type="importmap">
@@ -54,9 +55,13 @@
       </div>
     </div>
     <div id="editor-list"></div>
-    <div class="editor-footer">
+    <div class="editor-footer" style="display:flex;flex-direction:column;gap:6px;align-items:center;">
+      <div style="display:flex;gap:6px;">
+        <button class="editor-btn-sm" id="editor-save-pack" data-i18n="packs.saveBtn"></button>
+        <button class="editor-btn-sm" id="editor-load-pack" data-i18n="packs.loadBtn"></button>
+      </div>
       <div id="editor-error" class="error hidden"></div>
-      <button class="btn btn-secondary" id="editor-back-btn" style="margin-top:8px;" data-i18n="host.backLobby"></button>
+      <button class="btn btn-secondary" id="editor-back-btn" style="margin-top:4px;" data-i18n="host.backLobby"></button>
     </div>
   </div>
 
@@ -104,6 +109,20 @@
     <h2 data-i18n="player.lobby.title"></h2>
     <p data-i18n="player.lobby.waiting"></p>
     <div class="waiting" style="font-size:2em;margin-top:16px;">⏳</div>
+  </div>
+
+  <!-- Packs browser -->
+  <div id="screen-packs" class="screen screen-scroll">
+    <h2 data-i18n="packs.title"></h2>
+    <button class="btn btn-secondary" id="packs-back-btn" style="margin-top:4px;" data-i18n="packs.back"></button>
+    <div id="packs-list" style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:6px;flex:1;overflow-y:auto;min-height:0;margin-top:8px;"></div>
+    <hr style="width:100%;max-width:360px;border-color:rgba(255,255,255,0.1);margin:8px 0;">
+    <p data-i18n="packs.recoveryTitle" style="font-size:0.9em;opacity:0.8;"></p>
+    <div style="display:flex;gap:6px;width:100%;max-width:360px;">
+      <input type="text" id="packs-recovery-input" data-i18n="packs.recoveryPlaceholder" maxlength="6" style="text-transform:uppercase;flex:1;">
+      <button class="btn btn-secondary" id="packs-recovery-btn" style="padding:14px 20px;min-width:auto;" data-i18n="packs.recoveryBtn"></button>
+    </div>
+    <div id="packs-error" class="error hidden"></div>
   </div>
 
 </div>

@@ -121,6 +121,25 @@ var ru = {
   'upload.success': '✅ {file} загружен',
 
   'lang.toggle': 'EN',
+
+  'packs.title': 'Мои паки',
+  'packs.back': '← Назад',
+  'packs.empty': 'У вас ещё нет паков',
+  'packs.saveBtn': '💾 Сохранить пак',
+  'packs.loadBtn': '📂 Загрузить пак',
+  'packs.savePrompt': 'Название пака:',
+  'packs.loading': 'Загрузка...',
+  'packs.saving': 'Сохраняем...',
+  'packs.saved': 'Пак сохранён! Код восстановления: {code}',
+  'packs.recoveryTitle': 'Ввести код восстановления',
+  'packs.recoveryPlaceholder': 'XXXXXX',
+  'packs.recoveryBtn': 'Загрузить',
+  'packs.deleteConfirm': 'Удалить этот пак?',
+  'packs.error.auth': 'Ошибка входа: {msg}',
+  'packs.error.limit': 'Максимум {n} паков',
+  'packs.error.notFound': 'Пак не найден',
+  'packs.error.invalidCode': 'Неверный код (нужно 6 символов)',
+  'packs.error.codeNotFound': 'Код не найден',
 };
 
 var en = {
@@ -234,6 +253,25 @@ var en = {
   'upload.success': '✅ {file} uploaded',
 
   'lang.toggle': 'RU',
+
+  'packs.title': 'My Packs',
+  'packs.back': '← Back',
+  'packs.empty': 'No packs yet',
+  'packs.saveBtn': '💾 Save Pack',
+  'packs.loadBtn': '📂 Load Pack',
+  'packs.savePrompt': 'Pack name:',
+  'packs.loading': 'Loading...',
+  'packs.saving': 'Saving...',
+  'packs.saved': 'Pack saved! Recovery code: {code}',
+  'packs.recoveryTitle': 'Enter recovery code',
+  'packs.recoveryPlaceholder': 'XXXXXX',
+  'packs.recoveryBtn': 'Load',
+  'packs.deleteConfirm': 'Delete this pack?',
+  'packs.error.auth': 'Auth error: {msg}',
+  'packs.error.limit': 'Maximum {n} packs',
+  'packs.error.notFound': 'Pack not found',
+  'packs.error.invalidCode': 'Invalid code (need 6 characters)',
+  'packs.error.codeNotFound': 'Code not found',
 };
 
 var strings = { ru: ru, en: en };
