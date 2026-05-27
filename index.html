@@ -71,6 +71,7 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
 .round-label { font-size: 0.85em; opacity: 0.7; }
 .progress-label { font-size: 0.9em; font-weight: 600; }
 .question-text { font-size: 1.25em; font-weight: 700; margin: 12px 0; line-height: 1.4; }
+.text-answer-area { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
 </style>
 </head>
 <body>
@@ -360,14 +361,13 @@ function getSampleGameData() {
       },
       {
         type: 'question',
-        questionType: 'choice',
-        question: 'Какой язык программирования основан на котятах?',
+        questionType: 'text',
+        question: 'Назовите столицу Австралии',
         media: null,
-        options: ['JavaScript', 'Python', 'Java', 'C#'],
-        correctAnswer: 'JavaScript',
-        maxScore: 1000,
-        timeLimit: 20,
-        roundName: 'Технологии'
+        correctAnswer: ['Канберра', 'Canberra'],
+        maxScore: 2000,
+        timeLimit: 30,
+        roundName: 'География'
       }
     ]
   };
@@ -437,6 +437,28 @@ function renderCurrentItem(code, isHost, itemIndex, timerEndsAt) {
       }
       optsContainer.appendChild(btn);
     });
+  } else if (item.questionType === 'text') {
+    if (!isHost) {
+      var area = document.createElement('div');
+      area.className = 'text-answer-area';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'text-answer-input';
+      input.placeholder = 'Ваш ответ...';
+      input.maxLength = 100;
+      input.autocomplete = 'off';
+      var submitBtn = document.createElement('button');
+      submitBtn.className = 'btn btn-primary';
+      submitBtn.textContent = 'Ответить';
+      submitBtn.addEventListener('click', function() {
+        selectAnswer(code, itemIndex, input.value.trim());
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Отправлено';
+      });
+      area.appendChild(input);
+      area.appendChild(submitBtn);
+      optsContainer.appendChild(area);
+    }
   }
 
   // Timer
