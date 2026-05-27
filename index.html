@@ -72,6 +72,17 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
 .progress-label { font-size: 0.9em; font-weight: 600; }
 .question-text { font-size: 1.25em; font-weight: 700; margin: 12px 0; line-height: 1.4; }
 .text-answer-area { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
+.reveal-header { font-weight: 700; font-size: 1.05em; margin: 10px 0 6px; width: 100%; max-width: 320px; text-align: left; }
+.reveal-row { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 320px; padding: 10px 14px; border-radius: 10px; margin: 3px 0; font-size: 0.95em; }
+.reveal-row.correct { background: rgba(76,175,80,0.18); border: 1px solid rgba(76,175,80,0.35); }
+.reveal-row.wrong { background: rgba(244,67,54,0.18); border: 1px solid rgba(244,67,54,0.35); }
+.reveal-dist-bar { width: 100%; max-width: 320px; margin: 2px 0; display: flex; align-items: center; gap: 8px; font-size: 0.9em; }
+.reveal-dist-fill { height: 22px; border-radius: 6px; min-width: 4px; transition: width 0.4s; flex-shrink: 0; }
+.reveal-dist-fill.correct { background: #4caf50; }
+.reveal-dist-fill.wrong { background: rgba(255,255,255,0.25); }
+.reveal-dist-label { min-width: 60px; text-align: right; flex-shrink: 0; }
+.reveal-top3 { width: 100%; max-width: 320px; text-align: left; }
+.reveal-top3-item { display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 8px; margin: 2px 0; background: rgba(255,255,255,0.06); font-size: 0.95em; }
 </style>
 </head>
 <body>
@@ -409,8 +420,8 @@ function listenGameState(code, isHost) {
         renderCurrentItem(code, isHost, room.currentItem, room.timerEndsAt);
       });
     } else if (state === 'reveal') {
-      // P1.10 will replace this placeholder
-      document.getElementById('game-' + (isHost ? 'host' : 'player') + '-options').innerHTML = '<p class="waiting">Время вышло!</p>';
+      showScreen(isHost ? 'screen-game-host' : 'screen-game-player');
+      showReveal(code, isHost);
     }
   });
 
@@ -613,6 +624,164 @@ function computeScores(code, itemIndex) {
 
     return Object.keys(updates).length > 0 ? db.ref('rooms/' + code).update(updates) : Promise.resolve();
   });
+}
+
+// ─── Reveal Results ──────────────────────────────────────────────────
+function showReveal(code, isHost) {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (answerCountRef) { answerCountRef.off(); answerCountRef = null; }
+
+  var item = gameItems[gameStateCurrentItem];
+  if (!item) return;
+
+  var prefix = isHost ? 'host' : 'player';
+  var correctLabel = Array.isArray(item.correctAnswer) ? item.correctAnswer[0] : item.correctAnswer;
+
+  // Hide timer
+  document.getElementById('game-' + prefix + '-timer').style.display = 'none';
+  if (isHost) document.getElementById('game-host-answered').textContent = '';
+
+  db.ref('rooms/' + code).once('value').then(function(snap) {
+    var room = snap.val();
+    var answers = (room.answers && room.answers[gameStateCurrentItem]) || {};
+    var players = room.players || {};
+
+    if (isHost) {
+      renderHostReveal(prefix, item, answers, players, correctLabel, code);
+    } else {
+      renderPlayerReveal(prefix, item, answers, players, correctLabel);
+    }
+  });
+}
+
+function renderHostReveal(prefix, item, answers, players, correctLabel, code) {
+  var opts = document.getElementById('game-' + prefix + '-options');
+  opts.innerHTML = '';
+
+  var totalPlayers = Object.keys(players).length;
+  var answeredCount = Object.keys(answers).length;
+
+  // Correct answer header
+  var answerHeader = document.createElement('div');
+  answerHeader.className = 'reveal-header';
+  answerHeader.textContent = 'Правильный ответ: ' + correctLabel;
+  opts.appendChild(answerHeader);
+
+  // Distribution for choice
+  if (item.questionType === 'choice' && item.options) {
+    var maxCount = 0;
+    var counts = {};
+    item.options.forEach(function(opt) { counts[opt] = 0; });
+    Object.keys(answers).forEach(function(pid) {
+      var a = answers[pid].answer;
+      if (counts[a] !== undefined) counts[a]++;
+    });
+    maxCount = Math.max.apply(null, Object.keys(counts).map(function(k) { return counts[k]; }), 1);
+
+    item.options.forEach(function(opt) {
+      var bar = document.createElement('div');
+      bar.className = 'reveal-dist-bar';
+      var label = document.createElement('span');
+      label.className = 'reveal-dist-label';
+      label.textContent = opt;
+      var fillWrap = document.createElement('div');
+      fillWrap.style.cssText = 'flex:1;background:rgba(255,255,255,0.08);border-radius:6px;height:22px;';
+      var fill = document.createElement('div');
+      fill.className = 'reveal-dist-fill ' + (opt === correctLabel ? 'correct' : 'wrong');
+      fill.style.cssText = 'width:' + Math.round(counts[opt] / maxCount * 100) + '%;display:flex;align-items:center;padding-left:6px;font-size:0.85em;white-space:nowrap;';
+      fill.textContent = counts[opt] > 0 ? counts[opt] : '';
+      fillWrap.appendChild(fill);
+      bar.appendChild(label);
+      bar.appendChild(fillWrap);
+      opts.appendChild(bar);
+    });
+  } else if (item.questionType === 'text') {
+    var correctCount = 0;
+    Object.keys(answers).forEach(function(pid) {
+      if (answers[pid].correct) correctCount++;
+    });
+    var pct = answeredCount > 0 ? Math.round(correctCount / answeredCount * 100) : 0;
+    var info = document.createElement('p');
+    info.style.cssText = 'width:100%;max-width:320px;text-align:left;margin:4px 0;font-size:0.95em;';
+    info.textContent = 'Правильно: ' + correctCount + ' из ' + answeredCount + ' (' + pct + '%)';
+    opts.appendChild(info);
+  }
+
+  // Summary line
+  var summary = document.createElement('p');
+  summary.style.cssText = 'width:100%;max-width:320px;text-align:left;margin:8px 0 4px;font-size:0.9em;opacity:0.8;';
+  summary.textContent = 'Ответило: ' + answeredCount + ' / ' + totalPlayers;
+  opts.appendChild(summary);
+
+  // Top-3
+  renderTop3(opts, players);
+
+  // Next button
+  var nextBtn = document.createElement('button');
+  nextBtn.className = 'btn btn-primary';
+  nextBtn.textContent = 'Далее →';
+  nextBtn.addEventListener('click', function() {
+    advanceNext(code);
+  });
+  opts.appendChild(nextBtn);
+}
+
+function renderPlayerReveal(prefix, item, answers, players, correctLabel) {
+  var opts = document.getElementById('game-' + prefix + '-options');
+  opts.innerHTML = '';
+
+  var myAnswerData = answers[currentPlayerId];
+  var myAnswer = myAnswerData ? myAnswerData.answer : '—';
+  var points = myAnswerData ? myAnswerData.points : 0;
+  var isCorrect = myAnswerData ? myAnswerData.correct : false;
+
+  // My answer row
+  var myRow = document.createElement('div');
+  myRow.className = 'reveal-row ' + (isCorrect ? 'correct' : 'wrong');
+  myRow.innerHTML = '<span>Ваш ответ: <strong>' + escapeHtml(myAnswer) + '</strong></span><span>' + (isCorrect ? '✅' : '❌') + '</span>';
+  opts.appendChild(myRow);
+
+  // Correct answer row
+  var correctRow = document.createElement('div');
+  correctRow.className = 'reveal-row correct';
+  correctRow.innerHTML = '<span>Правильный: <strong>' + escapeHtml(correctLabel) + '</strong></span>';
+  opts.appendChild(correctRow);
+
+  // Points
+  var ptsEl = document.createElement('div');
+  ptsEl.style.cssText = 'font-size:1.1em;font-weight:700;margin:8px 0;width:100%;max-width:320px;text-align:left;';
+  ptsEl.textContent = (isCorrect ? '+' : '') + points + ' баллов';
+  opts.appendChild(ptsEl);
+
+  // Top-3
+  renderTop3(opts, players);
+}
+
+function renderTop3(container, players) {
+  var sorted = Object.keys(players)
+    .map(function(id) { return { id: id, nickname: players[id].nickname, score: players[id].score || 0 }; })
+    .sort(function(a, b) { return b.score - a.score; })
+    .slice(0, 3);
+
+  if (sorted.length === 0) return;
+
+  var header = document.createElement('div');
+  header.className = 'reveal-header';
+  header.textContent = 'Топ-3';
+  container.appendChild(header);
+
+  sorted.forEach(function(p, i) {
+    var row = document.createElement('div');
+    row.className = 'reveal-top3-item';
+    row.innerHTML = '<span>' + (i + 1) + '. ' + escapeHtml(p.nickname) + '</span><span>' + p.score + '</span>';
+    container.appendChild(row);
+  });
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str || ''));
+  return div.innerHTML;
 }
 
 // ─── Player: Select Answer ──────────────────────────────────────────
