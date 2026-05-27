@@ -47,4 +47,4 @@ Use `/feature <task>` to auto-advance through all phases. ⚠️ This rule is al
 - Feature slugs are kebab-case, derived from task description
 - Diagrams must be Mermaid in Markdown
 - All phase outputs committed to git after each phase
-- Short comments in GitHub issues per completed feature
+- GitHub issue created before each feature, referenced in state.json, commented after implementation

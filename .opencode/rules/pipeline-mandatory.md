@@ -17,6 +17,14 @@ You MUST NOT make any code changes directly. Every single modification to any fi
 - Do not edit files, do not write code, do not suggest patches outside the pipeline
 - The only exception is creating/updating pipeline config files themselves (`.opencode/`, `.claude/`, `AGENTS.md`, `opencode.json`)
 
+## GitHub Issue Required
+
+Before starting ANY feature, create a GitHub issue for it:
+- `gh issue create --title "<feature slug>: <brief description>" --body "via pipeline"`
+- The issue MUST be created in phase 1 (Research) before anything else
+- The issue number MUST be referenced in the feature's `state.json`
+- After implementation completes, add a comment to the issue: `gh issue comment <number> --body "Implemented in <commit hash>"`
+
 ## Artifacts
 
 All pipeline outputs MUST be written to `.artifacts/<feature-slug>/` and committed. No exceptions.
@@ -26,4 +34,5 @@ All pipeline outputs MUST be written to `.artifacts/<feature-slug>/` and committ
 After every pipeline run, verify that:
 - All 4 phases completed
 - Artifacts exist (research, design, plan, reviews)
+- GitHub issue was created and referenced in state.json
 - Code was committed
