@@ -122,6 +122,13 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
 .editor-btn-sm:hover { background: rgba(255,255,255,0.18); }
 .editor-btn-save { background: #4caf50; border: none; color: #fff; padding: 8px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95em; }
 .editor-btn-cancel { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.95em; }
+.lobby-qr { width: 140px; height: 140px; background: #fff; padding: 8px; border-radius: 12px; margin: 4px 0; }
+.lobby-qr img { width: 100%; height: 100%; }
+.copy-btn { background: none; border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 8px; padding: 4px 12px; font-size: 0.8em; cursor: pointer; }
+.copy-btn:hover { background: rgba(255,255,255,0.15); }
+.player-chip.disconnected { opacity: 0.4; }
+.player-chip .disc-label { margin-left: auto; font-size: 0.75em; opacity: 0.6; }
+.round-name-progress { font-size: 0.9em; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -140,7 +147,8 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
   <div id="screen-lobby-host" class="screen">
     <h2>Комната создана!</h2>
     <div class="room-code" id="room-code-display">----</div>
-    <p>Введите этот код на телефоне</p>
+    <div class="lobby-qr" id="lobby-qr"></div>
+    <p>Введите код на телефоне <button class="copy-btn" id="copy-code-btn">📋 Копировать</button></p>
     <div id="player-list"><p class="waiting">Ожидаем игроков...</p></div>
     <button class="btn btn-primary" id="host-start-btn" style="margin-top:8px" disabled>Начать игру</button>
     <button class="btn btn-secondary" id="host-edit-btn" style="margin-top:4px;">Редактировать вопросы</button>
@@ -314,6 +322,7 @@ hostCreateBtn.addEventListener('click', function() {
     showScreen('screen-lobby-host');
     listenPlayers(currentRoomCode);
     listenGameState(currentRoomCode, true);
+    showQRCode(currentRoomCode);
   }).catch(function(err) {
     showError(hostCreateError, 'Ошибка: ' + err.message);
   }).finally(function() {
@@ -327,6 +336,14 @@ function listenPlayers(code) {
   var ref = db.ref('rooms/' + code + '/players');
   var container = document.getElementById('player-list');
 
+  function updatePlayerChip(key, p) {
+    var chip = document.getElementById('player-' + key);
+    if (chip) {
+      chip.className = 'player-chip' + (p.connected === false ? ' disconnected' : '');
+      chip.innerHTML = escapeHtml(p.nickname) + (p.connected === false ? '<span class="disc-label">отключился</span>' : '');
+    }
+  }
+
   ref.on('child_added', function(snapshot) {
     var p = snapshot.val();
     var placeholder = container.querySelector('.waiting');
@@ -337,10 +354,14 @@ function listenPlayers(code) {
       var chip = document.createElement('div');
       chip.className = 'player-chip';
       chip.id = 'player-' + snapshot.key;
-      chip.textContent = p.nickname;
       container.appendChild(chip);
     }
+    updatePlayerChip(snapshot.key, p);
     updateStartButton();
+  });
+
+  ref.on('child_changed', function(snapshot) {
+    updatePlayerChip(snapshot.key, snapshot.val());
   });
 
   ref.on('child_removed', function(snapshot) {
@@ -355,6 +376,24 @@ function listenPlayers(code) {
     updateStartButton();
   });
 }
+
+// ─── QR Code + Copy ────────────────────────────────────────────────
+function showQRCode(code) {
+  var base = window.location.origin + window.location.pathname.replace(/\/?$/, '');
+  var url = base + '?room=' + code;
+  var qrContainer = document.getElementById('lobby-qr');
+  qrContainer.innerHTML = '<img src="https://chart.googleapis.com/chart?cht=qr&chs=280x280&chl=' + encodeURIComponent(url) + '&chld=L|0" alt="QR">';
+}
+
+document.getElementById('copy-code-btn').addEventListener('click', function() {
+  var code = document.getElementById('room-code-display').textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(function() {
+      document.getElementById('copy-code-btn').textContent = '✅ Скопировано';
+      setTimeout(function() { document.getElementById('copy-code-btn').textContent = '📋 Копировать'; }, 2000);
+    });
+  }
+});
 
 // ─── Host: Edit Questions Button ────────────────────────────────────
 document.getElementById('host-edit-btn').addEventListener('click', function() {
@@ -489,8 +528,9 @@ function renderCurrentItem(code, isHost, itemIndex, timerEndsAt) {
     document.getElementById('game-' + prefix + '-progress').textContent = 'Слайд ' + (itemIndex + 1) + ' / ' + gameItemCount;
     document.getElementById('game-' + prefix + '-question').textContent = item.description || '';
   } else {
-    document.getElementById('game-' + prefix + '-round').textContent = item.roundName || '';
-    document.getElementById('game-' + prefix + '-progress').textContent = 'Вопрос ' + (itemIndex + 1) + ' / ' + gameItemCount;
+    var rn = item.roundName || '';
+    document.getElementById('game-' + prefix + '-round').textContent = rn;
+    document.getElementById('game-' + prefix + '-progress').textContent = (rn ? rn + ' · ' : '') + 'Вопрос ' + (itemIndex + 1) + ' / ' + gameItemCount;
     document.getElementById('game-' + prefix + '-question').textContent = item.question;
   }
 
