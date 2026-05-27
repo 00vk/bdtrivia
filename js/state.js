@@ -9,7 +9,8 @@
   draftItems: [],
   editorExpandedIdx: -1,
   aiModel: null,
-  aiReady: false
+  aiReady: false,
+  currentLang: 'ru'
 };
 
 

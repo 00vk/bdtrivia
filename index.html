@@ -20,45 +20,47 @@
 <body>
 <div id="app">
 
+  <button id="lang-toggle" style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:6px;padding:4px 10px;font-size:0.85em;cursor:pointer;z-index:10;" data-i18n="lang.toggle"></button>
+
   <!-- Host: enter nickname -->
   <div id="screen-host-nickname" class="screen active">
     <h1>BdTrivia</h1>
-    <p>Ð¡Ð¾Ð·Ð´Ð°Ð¹Ñ‚Ðµ Ð²Ð¸ÐºÑ‚Ð¾Ñ€Ð¸Ð½Ñƒ Ð´Ð»Ñ Ð´Ñ€ÑƒÐ·ÐµÐ¹</p>
-    <input type="text" id="host-nickname-input" placeholder="Ð’Ð°ÑˆÐµ Ð¸Ð¼Ñ" maxlength="20" autocomplete="off">
-    <button class="btn btn-primary" id="host-create-btn">Ð¡Ð¾Ð·Ð´Ð°Ñ‚ÑŒ ÐºÐ¾Ð¼Ð½Ð°Ñ‚Ñƒ</button>
+    <p data-i18n="start.subtitle"></p>
+    <input type="text" id="host-nickname-input" data-i18n="host.nickname" maxlength="20" autocomplete="off">
+    <button class="btn btn-primary" id="host-create-btn" data-i18n="host.createBtn"></button>
     <div id="host-create-error" class="error hidden"></div>
   </div>
 
   <!-- Host: lobby -->
   <div id="screen-lobby-host" class="screen">
-    <h2>ÐšÐ¾Ð¼Ð½Ð°Ñ‚Ð° ÑÐ¾Ð·Ð´Ð°Ð½Ð°!</h2>
+    <h2 data-i18n="host.lobby.title"></h2>
     <div class="room-code" id="room-code-display">----</div>
     <div class="lobby-qr" id="lobby-qr"></div>
-    <p>Ð’Ð²ÐµÐ´Ð¸Ñ‚Ðµ ÐºÐ¾Ð´ Ð½Ð° Ñ‚ÐµÐ»ÐµÑ„Ð¾Ð½Ðµ <button class="copy-btn" id="copy-code-btn">ðŸ“‹ ÐšÐ¾Ð¿Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ</button></p>
-    <div id="player-list"><p class="waiting">ÐžÐ¶Ð¸Ð´Ð°ÐµÐ¼ Ð¸Ð³Ñ€Ð¾ÐºÐ¾Ð²...</p></div>
-    <button class="btn btn-primary" id="host-start-btn" style="margin-top:8px" disabled>ÐÐ°Ñ‡Ð°Ñ‚ÑŒ Ð¸Ð³Ñ€Ñƒ</button>
-    <button class="btn btn-secondary" id="host-edit-btn" style="margin-top:4px;">Ð ÐµÐ´Ð°ÐºÑ‚Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð²Ð¾Ð¿Ñ€Ð¾ÑÑ‹</button>
+    <p><span data-i18n="host.enterOnPhone"></span> <button class="copy-btn" id="copy-code-btn" data-i18n="host.copyBtn"></button></p>
+    <div id="player-list"><p class="waiting" data-i18n="host.waitingPlayers"></p></div>
+    <button class="btn btn-primary" id="host-start-btn" style="margin-top:8px" disabled data-i18n="host.startBtn"></button>
+    <button class="btn btn-secondary" id="host-edit-btn" style="margin-top:4px;" data-i18n="host.editBtn"></button>
     <div id="host-start-error" class="error hidden"></div>
   </div>
 
   <!-- Host: question editor -->
   <div id="screen-editor" class="screen screen-scroll">
     <div class="editor-header">
-      <h2>Ð ÐµÐ´Ð°ÐºÑ‚Ð¾Ñ€ Ð²Ð¾Ð¿Ñ€Ð¾ÑÐ¾Ð²</h2>
+      <h2 data-i18n="editor.title"></h2>
       <div class="editor-add-row">
-        <button class="editor-btn-sm" id="editor-add-choice">+ Ð’Ð¾Ð¿Ñ€Ð¾Ñ (Ð²Ñ‹Ð±Ð¾Ñ€)</button>
-        <button class="editor-btn-sm" id="editor-add-text">+ Ð’Ð¾Ð¿Ñ€Ð¾Ñ (Ñ‚ÐµÐºÑÑ‚)</button>
-        <button class="editor-btn-sm" id="editor-add-slide">+ Ð¡Ð»Ð°Ð¹Ð´</button>
+        <button class="editor-btn-sm" id="editor-add-choice" data-i18n="editor.addChoice"></button>
+        <button class="editor-btn-sm" id="editor-add-text" data-i18n="editor.addText"></button>
+        <button class="editor-btn-sm" id="editor-add-slide" data-i18n="editor.addSlide"></button>
       </div>
     </div>
     <div id="editor-list"></div>
     <div class="editor-footer">
       <div id="editor-error" class="error hidden"></div>
-      <button class="btn btn-secondary" id="editor-back-btn" style="margin-top:8px;">â† ÐÐ°Ð·Ð°Ð´ Ð² Ð»Ð¾Ð±Ð±Ð¸</button>
+      <button class="btn btn-secondary" id="editor-back-btn" style="margin-top:8px;" data-i18n="host.backLobby"></button>
     </div>
   </div>
 
-  <!-- Host: game in progress (question display) -->
+  <!-- Host: game in progress -->
   <div id="screen-game-host" class="screen">
     <div class="round-label" id="game-host-round"></div>
     <div class="progress-label" id="game-host-progress"></div>
@@ -66,42 +68,42 @@
     <div class="media-container" id="game-host-media"></div>
     <div id="game-host-options"></div>
     <div class="game-bar">
-      <span class="game-timer" id="game-host-timer">â± --:--</span>
+      <span class="game-timer" id="game-host-timer">⏱ --:--</span>
       <span class="game-answered" id="game-host-answered"></span>
     </div>
   </div>
 
-  <!-- Player: game in progress (question display) -->
+  <!-- Player: game in progress -->
   <div id="screen-game-player" class="screen">
     <div class="round-label" id="game-player-round"></div>
     <div class="progress-label" id="game-player-progress"></div>
     <div class="question-text" id="game-player-question"></div>
     <div class="media-container" id="game-player-media"></div>
     <div id="game-player-options"></div>
-    <span class="game-timer" id="game-player-timer">â± --:--</span>
+    <span class="game-timer" id="game-player-timer">⏱ --:--</span>
   </div>
 
   <!-- Player: enter room code -->
   <div id="screen-player-roomcode" class="screen">
-    <h2>ÐŸÑ€Ð¸ÑÐ¾ÐµÐ´Ð¸Ð½Ð¸Ñ‚ÑŒÑÑ Ðº Ð¸Ð³Ñ€Ðµ</h2>
-    <input type="text" id="player-code-input" placeholder="ÐšÐ¾Ð´ ÐºÐ¾Ð¼Ð½Ð°Ñ‚Ñ‹" maxlength="6" autocomplete="off">
-    <button class="btn btn-primary" id="player-join-code-btn">Ð”Ð°Ð»ÐµÐµ</button>
+    <h2 data-i18n="join.title"></h2>
+    <input type="text" id="player-code-input" data-i18n="join.roomCode" maxlength="6" autocomplete="off">
+    <button class="btn btn-primary" id="player-join-code-btn" data-i18n="join.nextBtn"></button>
     <div id="player-code-error" class="error hidden"></div>
   </div>
 
   <!-- Player: enter nickname -->
   <div id="screen-player-nickname" class="screen">
-    <h2>Ð’Ð°ÑˆÐµ Ð¸Ð¼Ñ</h2>
-    <input type="text" id="player-nickname-input" placeholder="ÐÐ¸ÐºÐ½ÐµÐ¹Ð¼" maxlength="20" autocomplete="off">
-    <button class="btn btn-primary" id="player-join-btn">ÐŸÑ€Ð¸ÑÐ¾ÐµÐ´Ð¸Ð½Ð¸Ñ‚ÑŒÑÑ</button>
+    <h2 data-i18n="join.yourName"></h2>
+    <input type="text" id="player-nickname-input" data-i18n="join.nicknameInput" maxlength="20" autocomplete="off">
+    <button class="btn btn-primary" id="player-join-btn" data-i18n="join.joinBtn"></button>
     <div id="player-join-error" class="error hidden"></div>
   </div>
 
   <!-- Player: lobby -->
   <div id="screen-lobby-player" class="screen">
-    <h2>Ð’Ñ‹ Ð² Ð¸Ð³Ñ€Ðµ!</h2>
-    <p>ÐžÐ¶Ð¸Ð´Ð°ÐµÐ¼, Ð¿Ð¾ÐºÐ° Ð²ÐµÐ´ÑƒÑ‰Ð¸Ð¹ Ð½Ð°Ñ‡Ð½Ñ‘Ñ‚...</p>
-    <div class="waiting" style="font-size:2em;margin-top:16px;">â³</div>
+    <h2 data-i18n="player.lobby.title"></h2>
+    <p data-i18n="player.lobby.waiting"></p>
+    <div class="waiting" style="font-size:2em;margin-top:16px;">⏳</div>
   </div>
 
 </div>
@@ -109,4 +111,3 @@
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
-

@@ -5,6 +5,7 @@ import { loadDraft, getGameItems } from './storage.js';
 import { renderEditorItems } from './editor.js';
 import { renderCurrentItem, showReveal, showFinished } from './game.js';
 import { ROOM_CODE_LENGTH, CHARSET } from './config.js';
+import { __ } from './locales.js';
 
 export function createUniqueRoomCode() {
   return new Promise(function(resolve, reject) {
@@ -31,7 +32,7 @@ export function listenPlayers(code) {
     var chip = document.getElementById('player-' + key);
     if (chip) {
       chip.className = 'player-chip' + (p.connected === false ? ' disconnected' : '');
-      chip.innerHTML = escapeHtml(p.nickname) + (p.connected === false ? '<span class="disc-label">отключился</span>' : '');
+      chip.innerHTML = escapeHtml(p.nickname) + (p.connected === false ? '<span class="disc-label">' + __('host.disconnected') + '</span>' : '');
     }
   }
 
@@ -57,7 +58,7 @@ export function listenPlayers(code) {
     if (container.children.length === 0) {
       var p = document.createElement('p');
       p.className = 'waiting';
-      p.textContent = 'Ожидаем игроков...';
+      p.textContent = __('host.waitingPlayers');
       container.appendChild(p);
     }
     updateStartButton();
@@ -155,10 +156,10 @@ export function initLobby() {
 
   hostCreateBtn.addEventListener('click', function() {
     var nickname = document.getElementById('host-nickname-input').value.trim();
-    if (!nickname) { showError(hostCreateError, 'Введите ваше имя'); return; }
+    if (!nickname) { showError(hostCreateError, __('host.error.nickname')); return; }
     hideError(hostCreateError);
     hostCreateBtn.disabled = true;
-    hostCreateBtn.textContent = 'Создаём...';
+    hostCreateBtn.textContent = __('host.creating');
 
     createUniqueRoomCode().then(function(code) {
       state.currentRoomCode = code;
@@ -178,10 +179,10 @@ export function initLobby() {
       listenGameState(state.currentRoomCode, true);
       showQRCode(state.currentRoomCode);
     }).catch(function(err) {
-      showError(hostCreateError, 'Ошибка: ' + err.message);
+      showError(hostCreateError, __('host.error.generic', {msg: err.message}));
     }).finally(function() {
       hostCreateBtn.disabled = false;
-      hostCreateBtn.textContent = 'Создать комнату';
+      hostCreateBtn.textContent = __('host.createBtn');
     });
   });
 
@@ -189,8 +190,8 @@ export function initLobby() {
     var code = document.getElementById('room-code-display').textContent;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(code).then(function() {
-        document.getElementById('copy-code-btn').textContent = '✅ Скопировано';
-        setTimeout(function() { document.getElementById('copy-code-btn').textContent = '📋 Копировать'; }, 2000);
+        document.getElementById('copy-code-btn').textContent = __('host.copied');
+        setTimeout(function() { document.getElementById('copy-code-btn').textContent = __('host.copyBtn'); }, 2000);
       });
     }
   });
@@ -207,18 +208,18 @@ export function initLobby() {
   hostStartBtn.addEventListener('click', function() {
     hideError(hostStartError);
     hostStartBtn.disabled = true;
-    hostStartBtn.textContent = 'Запускаем...';
+    hostStartBtn.textContent = __('host.starting');
 
     var storedKey = sessionStorage.getItem('bdtrivia_hostKey');
     if (!storedKey) {
-      showError(hostStartError, 'Не удалось подтвердить права ведущего. Обновите страницу.');
+      showError(hostStartError, __('host.error.auth'));
       hostStartBtn.disabled = false;
-      hostStartBtn.textContent = 'Начать игру';
+      hostStartBtn.textContent = __('host.startBtn');
       return;
     }
 
     db.ref('rooms/' + state.currentRoomCode + '/hostKey').once('value').then(function(snap) {
-      if (snap.val() !== storedKey) { throw new Error('Только ведущий может запустить игру'); }
+      if (snap.val() !== storedKey) { throw new Error(__('host.error.notHost')); }
       var startItems = getGameItems();
       var gameData = { items: startItems };
       gameData.state = 'playing';
@@ -227,9 +228,9 @@ export function initLobby() {
       gameData.timerEndsAt = firstItem && firstItem.type === 'question' ? Date.now() + (firstItem.timeLimit || 20) * 1000 : null;
       return db.ref('rooms/' + state.currentRoomCode).update(gameData);
     }).catch(function(err) {
-      showError(hostStartError, 'Ошибка: ' + err.message);
+      showError(hostStartError, __('host.error.generic', {msg: err.message}));
       hostStartBtn.disabled = false;
-      hostStartBtn.textContent = 'Начать игру';
+      hostStartBtn.textContent = __('host.startBtn');
     });
   });
 
@@ -240,16 +241,16 @@ export function initLobby() {
   var playerCodeError = document.getElementById('player-code-error');
   document.getElementById('player-join-code-btn').addEventListener('click', function() {
     var code = document.getElementById('player-code-input').value.trim();
-    if (!code || code.length < 3) { showError(playerCodeError, 'Введите код комнаты'); return; }
+    if (!code || code.length < 3) { showError(playerCodeError, __('join.error.enterCode')); return; }
     hideError(playerCodeError);
 
     db.ref('rooms/' + code).once('value').then(function(snapshot) {
-      if (!snapshot.exists()) { showError(playerCodeError, 'Комната не найдена'); return; }
+      if (!snapshot.exists()) { showError(playerCodeError, __('join.error.notFound')); return; }
       var room = snapshot.val();
-      if (room.state !== 'lobby') { showError(playerCodeError, 'Игра уже началась'); return; }
+      if (room.state !== 'lobby') { showError(playerCodeError, __('join.error.alreadyStarted')); return; }
       state.currentRoomCode = code;
       showScreen('screen-player-nickname');
-    }).catch(function(err) { showError(playerCodeError, 'Ошибка: ' + err.message); });
+    }).catch(function(err) { showError(playerCodeError, __('host.error.generic', {msg: err.message})); });
   });
 
   var playerJoinBtn = document.getElementById('player-join-btn');
@@ -257,10 +258,10 @@ export function initLobby() {
 
   playerJoinBtn.addEventListener('click', function() {
     var nickname = document.getElementById('player-nickname-input').value.trim();
-    if (!nickname) { showError(playerJoinError, 'Введите никнейм'); return; }
+    if (!nickname) { showError(playerJoinError, __('join.error.enterNickname')); return; }
     hideError(playerJoinError);
     playerJoinBtn.disabled = true;
-    playerJoinBtn.textContent = 'Присоединяюсь...';
+    playerJoinBtn.textContent = __('join.joining');
 
     var playersRef = db.ref('rooms/' + state.currentRoomCode + '/players');
     var newRef = playersRef.push();
@@ -271,9 +272,9 @@ export function initLobby() {
       showScreen('screen-lobby-player');
       listenGameState(state.currentRoomCode, false);
       playersRef.child(state.currentPlayerId).onDisconnect().update({ connected: false });
-    }).catch(function(err) { showError(playerJoinError, 'Ошибка: ' + err.message); }).finally(function() {
+    }).catch(function(err) { showError(playerJoinError, __('host.error.generic', {msg: err.message})); }).finally(function() {
       playerJoinBtn.disabled = false;
-      playerJoinBtn.textContent = 'Присоединиться';
+      playerJoinBtn.textContent = __('join.joinBtn');
     });
   });
 }

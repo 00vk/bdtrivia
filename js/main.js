@@ -3,6 +3,11 @@ import { db } from './firebase.js';
 import { showScreen, showError } from './ui.js';
 import { initLobby, tryReconnect } from './lobby.js';
 import { initEditor } from './editor.js';
+import { applyI18n, toggleLang } from './locales.js';
+
+applyI18n();
+
+document.getElementById('lang-toggle').addEventListener('click', toggleLang);
 
 initLobby();
 initEditor();
@@ -22,7 +27,6 @@ if (roomFromUrl) {
       } else {
         var room = snapshot.val();
         if (room.state !== 'lobby') {
-          showError(document.getElementById('player-code-error'), 'Игра уже началась');
           document.getElementById('player-code-input').value = code;
           showScreen('screen-player-roomcode');
         } else {

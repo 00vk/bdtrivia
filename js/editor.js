@@ -1,11 +1,12 @@
 import { state } from './state.js';
 import { showScreen, showError, hideError, escapeHtml } from './ui.js';
 import { saveDraft } from './storage.js';
+import { __ } from './locales.js';
 
 export function openUploadWidget(index) {
   var statusEl = document.getElementById('upload-status-' + index);
   if (typeof cloudinary === 'undefined') {
-    if (statusEl) statusEl.textContent = 'Виджет загрузки не загрузился. Проверьте интернет.';
+    if (statusEl) statusEl.textContent = __('upload.widgetError');
     return;
   }
   var widget = cloudinary.createUploadWidget({
@@ -17,14 +18,14 @@ export function openUploadWidget(index) {
     maxImageHeight: 2000
   }, function(error, result) {
     if (error) {
-      if (statusEl) statusEl.textContent = 'Ошибка: ' + (error.status || 'неизвестная');
+      if (statusEl) statusEl.textContent = __('upload.error', {status: error.status || __('upload.unknown')});
       return;
     }
     if (result.event === 'success') {
       var info = result.info;
       var url = info.secure_url;
       if (!url || !/^https:\/\/res\.cloudinary\.com\//.test(url)) {
-        if (statusEl) statusEl.textContent = 'Ошибка: недопустимый URL от Cloudinary';
+        if (statusEl) statusEl.textContent = __('upload.invalidUrl');
         return;
       }
       var typeMap = { image: 'image', audio: 'audio', video: 'video' };
@@ -36,7 +37,7 @@ export function openUploadWidget(index) {
         if (typeSelect) typeSelect.value = mediaType;
         if (urlInput) urlInput.value = url;
       }
-      if (statusEl) statusEl.textContent = '✅ ' + (info.original_filename || 'Файл') + ' загружен';
+      if (statusEl) statusEl.textContent = __('upload.success', {file: info.original_filename || __('upload.uploaded')});
       setTimeout(function() { if (statusEl) statusEl.textContent = ''; }, 4000);
     }
   });
@@ -47,7 +48,7 @@ export function renderEditorItems() {
   var list = document.getElementById('editor-list');
   list.innerHTML = '';
   if (state.draftItems.length === 0) {
-    list.innerHTML = '<p class="waiting" style="margin:16px 0;">Нет вопросов. Добавьте первый!</p>';
+    list.innerHTML = '<p class="waiting" style="margin:16px 0;">' + __('editor.noItems') + '</p>';
     return;
   }
   state.draftItems.forEach(function(item, i) {
@@ -57,10 +58,10 @@ export function renderEditorItems() {
 
     var summary = document.createElement('div');
     summary.className = 'editor-card-summary';
-    var icon = item.type === 'slide' ? '📄' : (item.questionType === 'text' ? '✏️' : '📝');
-    var preview = item.type === 'slide' ? (item.title || 'Слайд') : (item.question || 'Вопрос');
+    var icon = item.type === 'slide' ? '\uD83D\uDCC4' : (item.questionType === 'text' ? '\u270F\uFE0F' : '\uD83D\uDCDD');
+    var preview = item.type === 'slide' ? (item.title || __('editor.slidePlaceholder')) : (item.question || __('editor.questionPlaceholder'));
     summary.innerHTML =
-      '<span class="editor-card-grip">⠿</span>' +
+      '<span class="editor-card-grip">\u283F</span>' +
       '<span class="editor-card-icon">' + icon + '</span>' +
       '<span class="editor-card-preview">' + escapeHtml(preview) + '</span>';
     summary.addEventListener('click', function(e) {
@@ -83,62 +84,61 @@ export function renderEditorItems() {
 function buildEditorForm(form, item, index) {
   if (item.type === 'slide') {
     form.innerHTML =
-      '<label>Заголовок</label><input class="f-title" value="' + escapeHtml(item.title || '') + '" placeholder="Раунд 1: История">' +
-      '<label>Описание</label><textarea class="f-desc" placeholder="Правила раунда">' + escapeHtml(item.description || '') + '</textarea>';
+      '<label>' + __('form.title') + '</label><input class="f-title" value="' + escapeHtml(item.title || '') + '" placeholder="' + __('form.titlePlaceholder') + '">' +
+      '<label>' + __('form.description') + '</label><textarea class="f-desc" placeholder="' + __('form.descPlaceholder') + '">' + escapeHtml(item.description || '') + '</textarea>';
   } else {
-    var typeLabel = item.questionType === 'text' ? 'Свободный текст' : 'Выбор одного';
     form.innerHTML =
-      '<label>Вопрос</label><textarea class="f-question" placeholder="Текст вопроса">' + escapeHtml(item.question || '') + '</textarea>' +
-      '<label>Раунд</label><input class="f-round" value="' + escapeHtml(item.roundName || '') + '" placeholder="Название раунда">' +
+      '<label>' + __('form.question') + '</label><textarea class="f-question" placeholder="' + __('form.questionPlaceholder') + '">' + escapeHtml(item.question || '') + '</textarea>' +
+      '<label>' + __('form.round') + '</label><input class="f-round" value="' + escapeHtml(item.roundName || '') + '" placeholder="' + __('form.roundPlaceholder') + '">' +
       '<div style="display:flex;gap:8px;">' +
-        '<div style="flex:1;"><label>Лимит (сек)</label><input class="f-timelimit" type="number" value="' + (item.timeLimit || 20) + '" min="5" max="120" step="5"></div>' +
-        '<div style="flex:1;"><label>MAX баллов</label><input class="f-maxscore" type="number" value="' + (item.maxScore || 1000) + '" min="100" max="10000" step="100"></div>' +
+        '<div style="flex:1;"><label>' + __('form.timeLimit') + '</label><input class="f-timelimit" type="number" value="' + (item.timeLimit || 20) + '" min="5" max="120" step="5"></div>' +
+        '<div style="flex:1;"><label>' + __('form.maxScore') + '</label><input class="f-maxscore" type="number" value="' + (item.maxScore || 1000) + '" min="100" max="10000" step="100"></div>' +
       '</div>';
 
     if (item.questionType === 'choice') {
-      var optsHtml = '<label>Варианты ответов</label>';
+      var optsHtml = '<label>' + __('form.options') + '</label>';
       optsHtml += '<div class="editor-opt-list">';
       (item.options || ['', '', '', '']).forEach(function(opt, oi) {
         optsHtml +=
           '<div class="editor-opt-row">' +
-            '<span class="editor-opt-grip">⠿</span>' +
-            '<input class="f-opt" value="' + escapeHtml(opt) + '" placeholder="Вариант ' + (oi + 1) + '">' +
+            '<span class="editor-opt-grip">\u283F</span>' +
+            '<input class="f-opt" value="' + escapeHtml(opt) + '" placeholder="' + __('form.optionPlaceholder', {n: oi + 1}) + '">' +
             '<input class="opt-correct" type="radio" name="correct-' + index + '" value="' + oi + '" ' + (item.correctAnswer === opt ? 'checked' : '') + '>' +
-            (item.options.length > 2 ? '<button class="opt-remove" data-oi="' + oi + '">×</button>' : '') +
+            (item.options.length > 2 ? '<button class="opt-remove" data-oi="' + oi + '">\u00D7</button>' : '') +
           '</div>';
       });
       optsHtml += '</div>';
-      optsHtml += '<button class="editor-btn-sm" id="add-opt-' + index + '" ' + (item.options.length >= 6 ? 'disabled style="opacity:0.4"' : '') + '>+ Вариант</button>';
+      optsHtml += '<button class="editor-btn-sm" id="add-opt-' + index + '" ' + (item.options.length >= 6 ? 'disabled style="opacity:0.4"' : '') + '>+ ' + __('form.options') + '</button>';
       form.innerHTML += optsHtml;
       form.querySelector('.f-question').dataset.type = 'choice';
     } else {
       var correctVal = Array.isArray(item.correctAnswer) ? item.correctAnswer.join(', ') : (item.correctAnswer || '');
       form.innerHTML +=
-        '<label>Правильный ответ (синонимы через запятую)</label><input class="f-correct-text" value="' + escapeHtml(correctVal) + '" placeholder="Канберра, Canberra">';
+        '<label>' + __('form.correctAnswer') + '</label><input class="f-correct-text" value="' + escapeHtml(correctVal) + '" placeholder="' + __('form.correctPlaceholder') + '">';
     }
   }
 
   var media = item.media || {};
   form.innerHTML +=
-    '<label>Медиа (необязательно)</label>' +
+    '<label>' + __('form.media') + '</label>' +
     '<div style="display:flex;gap:6px;">' +
       '<select class="f-media-type" style="flex:0 0 auto;width:auto;padding:8px;border:none;border-radius:8px;background:rgba(255,255,255,0.12);color:#fff;">' +
-        '<option value="">Нет</option>' +
-        '<option value="youtube" ' + (media.type === 'youtube' ? 'selected' : '') + '>YouTube</option>' +
-        '<option value="image" ' + (media.type === 'image' ? 'selected' : '') + '>Картинка</option>' +
-        '<option value="audio" ' + (media.type === 'audio' ? 'selected' : '') + '>Аудио</option>' +
-        '<option value="video" ' + (media.type === 'video' ? 'selected' : '') + '>Видео</option>' +
+        '<option value="">' + __('form.mediaNone') + '</option>' +
+        '<option value="youtube" ' + (media.type === 'youtube' ? 'selected' : '') + '>' + __('form.mediaYoutube') + '</option>' +
+        '<option value="image" ' + (media.type === 'image' ? 'selected' : '') + '>' + __('form.mediaImage') + '</option>' +
+        '<option value="audio" ' + (media.type === 'audio' ? 'selected' : '') + '>' + __('form.mediaAudio') + '</option>' +
+        '<option value="video" ' + (media.type === 'video' ? 'selected' : '') + '>' + __('form.mediaVideo') + '</option>' +
       '</select>' +
-      '<input class="f-media-url" style="flex:1;" value="' + escapeHtml(media.url || '') + '" placeholder="URL медиа">' +
-      '<button class="editor-btn-sm editor-upload-btn" data-action="upload" title="Загрузить файл">📁</button>' +
+      '<input class="f-media-url" style="flex:1;" value="' + escapeHtml(media.url || '') + '" placeholder="URL">' +
+      '<button class="editor-btn-sm editor-upload-btn" data-action="upload" title="' + __('form.uploadFile') + '">\uD83D\uDCC1</button>' +
     '</div>' +
     '<div class="editor-upload-status" id="upload-status-' + index + '"></div>';
 
   form.innerHTML +=
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">' +
-      '<button class="editor-btn-delete" data-action="delete" data-i="' + index + '" style="margin-right:auto;">✕ Удалить</button>' +
-      '<button class="editor-btn-cancel" data-action="cancel">Отмена</button>' +
-      '<button class="editor-btn-save" data-action="save">Сохранить</button>' +
+      '<button class="editor-btn-delete" data-action="delete" data-i="' + index + '" style="margin-right:auto;">' + __('form.delete') + '</button>' +
+      '<button class="editor-btn-cancel" data-action="cancel">' + __('form.cancel') + '</button>' +
+      '<button class="editor-btn-save" data-action="save">' + __('form.save') + '</button>' +
     '</div>';
 
   form.addEventListener('click', function(e) {
@@ -205,28 +205,28 @@ function saveEditorItem(index) {
   if (item.type === 'slide') {
     item.title = form.querySelector('.f-title').value.trim();
     item.description = form.querySelector('.f-desc').value.trim();
-    if (!item.title) { showError(document.getElementById('editor-error'), 'Заголовок слайда обязателен'); return; }
+    if (!item.title) { showError(document.getElementById('editor-error'), __('error.slideTitleRequired')); return; }
   } else {
     item.question = form.querySelector('.f-question').value.trim();
     item.roundName = form.querySelector('.f-round').value.trim();
     item.timeLimit = parseInt(form.querySelector('.f-timelimit').value) || 20;
     item.maxScore = parseInt(form.querySelector('.f-maxscore').value) || 1000;
 
-    if (!item.question) { showError(document.getElementById('editor-error'), 'Вопрос не может быть пустым'); return; }
+    if (!item.question) { showError(document.getElementById('editor-error'), __('error.questionRequired')); return; }
 
     if (item.questionType === 'choice') {
       var optInputs = form.querySelectorAll('.f-opt');
       var opts = [];
       optInputs.forEach(function(inp) { if (inp.value.trim()) opts.push(inp.value.trim()); });
-      if (opts.length < 2) { showError(document.getElementById('editor-error'), 'Нужно минимум 2 варианта ответа'); return; }
+      if (opts.length < 2) { showError(document.getElementById('editor-error'), __('error.minOptions')); return; }
       item.options = opts;
       var correctRadio = form.querySelector('input[name="correct-' + index + '"]:checked');
-      if (!correctRadio) { showError(document.getElementById('editor-error'), 'Выберите правильный ответ'); return; }
+      if (!correctRadio) { showError(document.getElementById('editor-error'), __('error.selectCorrect')); return; }
       item.correctAnswer = opts[parseInt(correctRadio.value)];
     } else {
       var raw = form.querySelector('.f-correct-text').value || '';
       var syns = raw.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
-      if (syns.length === 0) { showError(document.getElementById('editor-error'), 'Укажите хотя бы один правильный ответ'); return; }
+      if (syns.length === 0) { showError(document.getElementById('editor-error'), __('error.specifyAnswer')); return; }
       item.correctAnswer = syns;
     }
 
@@ -242,7 +242,7 @@ function saveEditorItem(index) {
 }
 
 function deleteItem(index) {
-  if (!confirm('Удалить этот элемент?')) return;
+  if (!confirm(__('error.confirmDelete'))) return;
   state.draftItems.splice(index, 1);
   if (state.editorExpandedIdx === index) state.editorExpandedIdx = -1;
   else if (state.editorExpandedIdx > index) state.editorExpandedIdx--;
