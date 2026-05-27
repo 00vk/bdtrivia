@@ -265,6 +265,7 @@ hostCreateBtn.addEventListener('click', function() {
     currentRoomCode = code;
     var hostKey = Array.from(crypto.getRandomValues(new Uint8Array(6)), function(b) { return b.toString(36).padStart(2, '0'); }).join('').slice(0, 10);
     sessionStorage.setItem('bdtrivia_hostKey', hostKey);
+    sessionStorage.setItem('bdtrivia_room', code);
     return db.ref('rooms/' + code).set({
       hostNickname: nickname,
       hostKey: hostKey,
@@ -987,9 +988,47 @@ playerJoinBtn.addEventListener('click', function() {
   });
 });
 
-// ─── Initial Screen ────────────────────────────────────────────────
+// ─── Initial Screen / Reconnect ─────────────────────────────────────
 var params = new URLSearchParams(window.location.search);
 var roomFromUrl = params.get('room');
+
+function tryReconnect() {
+  var savedRoom = sessionStorage.getItem('bdtrivia_room');
+  var savedPlayerId = sessionStorage.getItem('bdtrivia_playerId');
+  var savedHostKey = sessionStorage.getItem('bdtrivia_hostKey');
+  if (!savedRoom) return;
+
+  currentRoomCode = savedRoom;
+  db.ref('rooms/' + savedRoom).once('value').then(function(snapshot) {
+    if (!snapshot.exists()) { sessionStorage.clear(); return; }
+    var room = snapshot.val();
+
+    // Host reconnect
+    if (savedHostKey && room.hostKey === savedHostKey) {
+      document.getElementById('room-code-display').textContent = savedRoom;
+      if (room.state === 'lobby') {
+        showScreen('screen-lobby-host');
+        listenPlayers(savedRoom);
+        listenGameState(savedRoom, true);
+        return;
+      }
+      listenGameState(savedRoom, true);
+      return;
+    }
+
+    // Player reconnect
+    if (savedPlayerId && room.players && room.players[savedPlayerId]) {
+      currentPlayerId = savedPlayerId;
+      if (room.state === 'lobby') {
+        showScreen('screen-lobby-player');
+        listenGameState(savedRoom, false);
+        return;
+      }
+      listenGameState(savedRoom, false);
+      return;
+    }
+  });
+}
 
 if (roomFromUrl) {
   currentRoomCode = roomFromUrl.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -1008,6 +1047,8 @@ if (roomFromUrl) {
     console.error('Room lookup failed:', err);
     showScreen('screen-player-roomcode');
   });
+} else {
+  tryReconnect();
 }
 </script>
 </body>
