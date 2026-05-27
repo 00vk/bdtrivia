@@ -1,0 +1,15 @@
+{
+  "feature": "media-upload",
+  "repo": "bdtrivia",
+  "repo_path": "V:\\projects\\bdtrivia",
+  "task_description": "Add media file upload to editor — Cloudinary widget, auto-fill URL/type, progress, 10MB limit",
+  "issue_number": 31,
+  "phases_completed": ["research", "design", "plan", "implement"],
+  "phase": "implement",
+  "created_at": "2026-05-27T23:45:00+03:00",
+  "updated_at": "2026-05-27T23:50:00+03:00",
+  "research_completed_at": "2026-05-27T23:45:30+03:00",
+  "design_completed_at": "2026-05-27T23:45:45+03:00",
+  "plan_completed_at": "2026-05-27T23:46:00+03:00",
+  "implement_completed_at": "2026-05-27T23:50:00+03:00"
+}

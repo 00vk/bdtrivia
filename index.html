@@ -6,6 +6,7 @@
 <title>BdTrivia</title>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
@@ -113,6 +114,8 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
 .editor-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .editor-card-actions button { background: none; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; padding: 4px 8px; font-size: 0.95em; cursor: pointer; }
 .editor-card-actions button:hover { background: rgba(255,255,255,0.15); }
+.editor-upload-btn { font-size: 1.1em; padding: 4px 8px; }
+.editor-upload-status { font-size: 0.85em; opacity: 0.7; margin-top: 2px; min-height: 1.2em; }
 .editor-card-form { display: none; flex-direction: column; gap: 10px; padding: 10px 14px 14px; border-top: 1px solid rgba(255,255,255,0.1); }
 .editor-card-form.open { display: flex; }
 .editor-card-form label { font-size: 1em; opacity: 0.8; text-align: left; }
@@ -732,6 +735,12 @@ function renderMedia(media, containerId) {
     audio.src = media.url;
     audio.controls = true;
     container.appendChild(audio);
+  } else if (media.type === 'video') {
+    var video = document.createElement('video');
+    video.src = media.url;
+    video.controls = true;
+    video.style.width = '100%';
+    container.appendChild(video);
   }
 }
 
@@ -1049,14 +1058,17 @@ function buildEditorForm(form, item, index) {
   form.innerHTML +=
     '<label>Медиа (необязательно)</label>' +
     '<div style="display:flex;gap:6px;">' +
-      '<select class="f-media-type" style="flex:0 0 auto;width:auto;padding:8px;border:none;border-radius:8px;background:rgba(255,255,255,0.12);color:#fff;">' +
-        '<option value="">Нет</option>' +
-        '<option value="youtube" ' + (media.type === 'youtube' ? 'selected' : '') + '>YouTube</option>' +
-        '<option value="image" ' + (media.type === 'image' ? 'selected' : '') + '>Картинка</option>' +
-        '<option value="audio" ' + (media.type === 'audio' ? 'selected' : '') + '>Аудио</option>' +
-      '</select>' +
+  '<select class="f-media-type" style="flex:0 0 auto;width:auto;padding:8px;border:none;border-radius:8px;background:rgba(255,255,255,0.12);color:#fff;">' +
+    '<option value="">Нет</option>' +
+    '<option value="youtube" ' + (media.type === 'youtube' ? 'selected' : '') + '>YouTube</option>' +
+    '<option value="image" ' + (media.type === 'image' ? 'selected' : '') + '>Картинка</option>' +
+    '<option value="audio" ' + (media.type === 'audio' ? 'selected' : '') + '>Аудио</option>' +
+    '<option value="video" ' + (media.type === 'video' ? 'selected' : '') + '>Видео</option>' +
+  '</select>' +
       '<input class="f-media-url" style="flex:1;" value="' + escapeHtml(media.url || '') + '" placeholder="URL медиа">' +
-    '</div>';
+      '<button class="editor-btn-sm editor-upload-btn" data-action="upload" title="Загрузить файл">📁</button>' +
+    '</div>' +
+    '<div class="editor-upload-status" id="upload-status-' + index + '"></div>';
 
   // Buttons
   form.innerHTML +=
@@ -1073,6 +1085,8 @@ function buildEditorForm(form, item, index) {
       renderEditorItems();
     } else if (action === 'save') {
       saveEditorItem(index);
+    } else if (action === 'upload') {
+      openUploadWidget(index);
     } else if (e.target.classList.contains('opt-remove')) {
       var oi = parseInt(e.target.dataset.oi);
       if (draftItems[index].options.length > 2) {
@@ -1101,6 +1115,49 @@ function buildEditorForm(form, item, index) {
 
 function setExpanded(idx) {
   editorExpandedIdx = idx;
+}
+
+// ─── Cloudinary Upload ────────────────────────────────────────────
+function openUploadWidget(index) {
+  var statusEl = document.getElementById('upload-status-' + index);
+  if (typeof cloudinary === 'undefined') {
+    if (statusEl) statusEl.textContent = 'Виджет загрузки не загрузился. Проверьте интернет.';
+    return;
+  }
+  var widget = cloudinary.createUploadWidget({
+    cloudName: 'dcdvpwr2v',
+    uploadPreset: 'bdtrivia',
+    maxFileSize: 10485760,
+    clientAllowedFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp3', 'wav', 'ogg', 'aac'],
+    maxImageWidth: 2000,
+    maxImageHeight: 2000
+  }, function(error, result) {
+    if (error) {
+      if (statusEl) statusEl.textContent = 'Ошибка: ' + (error.status || 'неизвестная');
+      return;
+    }
+    if (result.event === 'success') {
+      var info = result.info;
+      var url = info.secure_url;
+      // Only accept Cloudinary HTTPS URLs
+      if (!url || !/^https:\/\/res\.cloudinary\.com\//.test(url)) {
+        if (statusEl) statusEl.textContent = 'Ошибка: недопустимый URL от Cloudinary';
+        return;
+      }
+      var typeMap = { image: 'image', audio: 'audio', video: 'video' };
+      var mediaType = typeMap[info.resource_type] || 'image';
+      var form = document.querySelector('.editor-card-form.open');
+      if (form) {
+        var typeSelect = form.querySelector('.f-media-type');
+        var urlInput = form.querySelector('.f-media-url');
+        if (typeSelect) typeSelect.value = mediaType;
+        if (urlInput) urlInput.value = url;
+      }
+      if (statusEl) statusEl.textContent = '✅ ' + (info.original_filename || 'Файл') + ' загружен';
+      setTimeout(function() { if (statusEl) statusEl.textContent = ''; }, 4000);
+    }
+  });
+  widget.open();
 }
 
 function saveEditorItem(index) {
