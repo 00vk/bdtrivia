@@ -1,0 +1,14 @@
+{
+  "feature": "editor-layout-scroll",
+  "repo": "bdtrivia",
+  "repo_path": "V:\\projects\\bdtrivia",
+  "task_description": "Fix editor layout — elements should not compress, screen should scroll naturally, functional buttons on the side, center column for questions only, everything 20% larger",
+  "phases_completed": ["research", "design", "plan", "implement"],
+  "phase": "implement",
+  "created_at": "2026-05-27T23:20:00+03:00",
+  "updated_at": "2026-05-27T23:25:00+03:00",
+  "research_completed_at": "2026-05-27T23:20:00+03:00",
+  "design_completed_at": "2026-05-27T23:20:30+03:00",
+  "plan_completed_at": "2026-05-27T23:21:00+03:00",
+  "implement_completed_at": "2026-05-27T23:25:00+03:00"
+}

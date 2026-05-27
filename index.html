@@ -18,6 +18,11 @@ body {
 #app { width: 100%; max-width: 480px; height: 100vh; max-height: 800px; padding: 24px; }
 .screen { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; gap: 16px; }
 .screen.active { display: flex; }
+.screen-scroll { justify-content: flex-start; overflow: hidden; }
+.screen-scroll > .editor-header { flex-shrink: 0; width: 100%; }
+.screen-scroll > .editor-footer { flex-shrink: 0; width: 100%; }
+.editor-header h2 { margin-bottom: 4px; }
+.editor-add-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 360px; }
 h1 { font-size: 2.2em; font-weight: 800; letter-spacing: -0.02em; }
 h2 { font-size: 1.4em; font-weight: 600; }
 p { font-size: 0.95em; opacity: 0.85; line-height: 1.4; }
@@ -99,29 +104,29 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
 .rank-pos { min-width: 28px; opacity: 0.7; }
 .rank-name { flex: 1; text-align: left; margin-left: 8px; }
 .rank-score { font-weight: 600; }
-#editor-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 6px; margin: 4px 0; max-height: 55vh; overflow-y: auto; }
+#editor-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 8px; margin: 4px 0; flex: 1; overflow-y: auto; min-height: 0; }
 .editor-card { background: rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; }
-.editor-card-summary { display: flex; align-items: center; gap: 8px; padding: 10px 12px; cursor: pointer; user-select: none; }
+.editor-card-summary { display: flex; align-items: center; gap: 8px; padding: 12px 14px; cursor: pointer; user-select: none; }
 .editor-card-summary:hover { background: rgba(255,255,255,0.05); }
-.editor-card-icon { font-size: 1.2em; width: 28px; text-align: center; flex-shrink: 0; }
-.editor-card-preview { flex: 1; text-align: left; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-card-icon { font-size: 1.4em; width: 32px; text-align: center; flex-shrink: 0; }
+.editor-card-preview { flex: 1; text-align: left; font-size: 1.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
-.editor-card-actions button { background: none; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; padding: 2px 6px; font-size: 0.8em; cursor: pointer; }
+.editor-card-actions button { background: none; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; padding: 4px 8px; font-size: 0.95em; cursor: pointer; }
 .editor-card-actions button:hover { background: rgba(255,255,255,0.15); }
-.editor-card-form { display: none; flex-direction: column; gap: 8px; padding: 8px 12px 12px; border-top: 1px solid rgba(255,255,255,0.1); }
+.editor-card-form { display: none; flex-direction: column; gap: 10px; padding: 10px 14px 14px; border-top: 1px solid rgba(255,255,255,0.1); }
 .editor-card-form.open { display: flex; }
-.editor-card-form label { font-size: 0.85em; opacity: 0.8; text-align: left; }
-.editor-card-form input, .editor-card-form textarea, .editor-card-form select { width: 100%; padding: 10px 12px; border: none; border-radius: 8px; font-size: 0.95em; background: rgba(255,255,255,0.12); color: #fff; font-family: inherit; }
-.editor-card-form textarea { resize: vertical; min-height: 50px; }
+.editor-card-form label { font-size: 1em; opacity: 0.8; text-align: left; }
+.editor-card-form input, .editor-card-form textarea, .editor-card-form select { width: 100%; padding: 12px 14px; border: none; border-radius: 8px; font-size: 1.1em; background: rgba(255,255,255,0.12); color: #fff; font-family: inherit; }
+.editor-card-form textarea { resize: vertical; min-height: 60px; }
 .editor-card-form input::placeholder, .editor-card-form textarea::placeholder { color: rgba(255,255,255,0.4); }
-.editor-opt-row { display: flex; gap: 6px; align-items: center; }
+.editor-opt-row { display: flex; gap: 8px; align-items: center; }
 .editor-opt-row input { flex: 1; }
 .editor-opt-row .opt-correct { flex-shrink: 0; }
-.editor-opt-row .opt-remove { background: none; border: none; color: #ff8888; cursor: pointer; font-size: 1.1em; padding: 0 4px; }
-.editor-btn-sm { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; background: rgba(255,255,255,0.08); color: #fff; font-size: 0.85em; cursor: pointer; }
+.editor-opt-row .opt-remove { background: none; border: none; color: #ff8888; cursor: pointer; font-size: 1.3em; padding: 0 4px; }
+.editor-btn-sm { padding: 8px 16px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; background: rgba(255,255,255,0.08); color: #fff; font-size: 1em; cursor: pointer; }
 .editor-btn-sm:hover { background: rgba(255,255,255,0.18); }
-.editor-btn-save { background: #4caf50; border: none; color: #fff; padding: 8px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95em; }
-.editor-btn-cancel { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.95em; }
+.editor-btn-save { background: #4caf50; border: none; color: #fff; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1.1em; }
+.editor-btn-cancel { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 1.1em; }
 .lobby-qr { width: 140px; height: 140px; background: #fff; padding: 8px; border-radius: 12px; margin: 4px 0; }
 .lobby-qr img { width: 100%; height: 100%; }
 .copy-btn { background: none; border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 8px; padding: 4px 12px; font-size: 0.8em; cursor: pointer; }
@@ -156,16 +161,20 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
   </div>
 
   <!-- Host: question editor -->
-  <div id="screen-editor" class="screen">
-    <h2>Редактор вопросов</h2>
-    <div id="editor-list"></div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:100%;max-width:360px;">
-      <button class="editor-btn-sm" id="editor-add-choice">+ Вопрос (выбор)</button>
-      <button class="editor-btn-sm" id="editor-add-text">+ Вопрос (текст)</button>
-      <button class="editor-btn-sm" id="editor-add-slide">+ Слайд</button>
+  <div id="screen-editor" class="screen screen-scroll">
+    <div class="editor-header">
+      <h2>Редактор вопросов</h2>
+      <div class="editor-add-row">
+        <button class="editor-btn-sm" id="editor-add-choice">+ Вопрос (выбор)</button>
+        <button class="editor-btn-sm" id="editor-add-text">+ Вопрос (текст)</button>
+        <button class="editor-btn-sm" id="editor-add-slide">+ Слайд</button>
+      </div>
     </div>
-    <div id="editor-error" class="error hidden"></div>
-    <button class="btn btn-secondary" id="editor-back-btn" style="margin-top:8px;">← Назад в лобби</button>
+    <div id="editor-list"></div>
+    <div class="editor-footer">
+      <div id="editor-error" class="error hidden"></div>
+      <button class="btn btn-secondary" id="editor-back-btn" style="margin-top:8px;">← Назад в лобби</button>
+    </div>
   </div>
 
   <!-- Host: game in progress (question display) -->
