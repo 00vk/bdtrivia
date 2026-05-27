@@ -1,4 +1,4 @@
-export const state = {
+﻿export const state = {
   currentRoomCode: null,
   currentPlayerId: null,
   gameItems: null,
@@ -7,5 +7,9 @@ export const state = {
   timerInterval: null,
   answerCountRef: null,
   draftItems: [],
-  editorExpandedIdx: -1
+  editorExpandedIdx: -1,
+  aiModel: null,
+  aiReady: false
 };
+
+

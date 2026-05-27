@@ -1,0 +1,15 @@
+﻿{
+  "feature": "ai-validation",
+  "task": "AI-based text answer validation using Transformers.js — multilingual embeddings in-browser on host side",
+  "github_issue": 37,
+  "created": "2026-05-28",
+  "phases_completed": ["research", "design", "plan"],
+  "current_phase": "complete",
+  "phase_results": {
+    "research": "research.md created", "design": "6 design documents in design/", "plan": "1 phase in plan/", "implement": "Code written, 4 reviews passed after fixes", "reviews": "4 reviews in reviews/phase-01/" in index.html, js/answer-validation.js, js/state.js, js/game.js"
+  }
+}
+
+
+
+
