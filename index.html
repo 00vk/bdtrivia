@@ -50,6 +50,27 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
 @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 0.3; } }
 .error { color: #ffb3b3; font-size: 0.9em; background: rgba(255,0,0,0.1); padding: 8px 16px; border-radius: 8px; width: 100%; max-width: 320px; }
 .hidden { display: none; }
+#game-host-options, #game-player-options { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 10px; }
+.opt-btn {
+  width: 100%; padding: 16px 20px; border: 2px solid rgba(255,255,255,0.25); border-radius: 12px;
+  background: rgba(255,255,255,0.08); color: #fff; font-size: 1.1em; font-weight: 600;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  text-align: left;
+}
+.opt-btn:hover, .opt-btn:focus-visible { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.5); }
+.opt-btn:active { transform: scale(0.97); }
+.opt-btn.selected { background: rgba(255,255,255,0.25); border-color: #fff; }
+.opt-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+.game-bar { display: flex; justify-content: space-between; width: 100%; max-width: 320px; font-size: 0.9em; margin-top: 8px; }
+.game-timer { font-weight: 700; font-variant-numeric: tabular-nums; }
+.game-answered { opacity: 0.8; }
+.media-container { width: 100%; max-width: 320px; margin: 8px 0; }
+.media-container iframe { width: 100%; aspect-ratio: 16/9; border-radius: 12px; border: none; }
+.media-container img { width: 100%; border-radius: 12px; max-height: 200px; object-fit: cover; }
+.media-container audio { width: 100%; }
+.round-label { font-size: 0.85em; opacity: 0.7; }
+.progress-label { font-size: 0.9em; font-weight: 600; }
+.question-text { font-size: 1.25em; font-weight: 700; margin: 12px 0; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -74,16 +95,27 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
     <div id="host-start-error" class="error hidden"></div>
   </div>
 
-  <!-- Host: game in progress (placeholder, built out in P1.4+) -->
+  <!-- Host: game in progress (question display) -->
   <div id="screen-game-host" class="screen">
-    <h2>Игра идёт!</h2>
-    <p id="game-host-status">Загружаем вопрос...</p>
+    <div class="round-label" id="game-host-round"></div>
+    <div class="progress-label" id="game-host-progress"></div>
+    <div class="question-text" id="game-host-question"></div>
+    <div class="media-container" id="game-host-media"></div>
+    <div id="game-host-options"></div>
+    <div class="game-bar">
+      <span class="game-timer" id="game-host-timer">⏱ --:--</span>
+      <span class="game-answered" id="game-host-answered"></span>
+    </div>
   </div>
 
-  <!-- Player: game started (placeholder, built out in P1.4+) -->
+  <!-- Player: game in progress (question display) -->
   <div id="screen-game-player" class="screen">
-    <h2>Игра началась!</h2>
-    <p id="game-player-status">Ожидаем вопрос...</p>
+    <div class="round-label" id="game-player-round"></div>
+    <div class="progress-label" id="game-player-progress"></div>
+    <div class="question-text" id="game-player-question"></div>
+    <div class="media-container" id="game-player-media"></div>
+    <div id="game-player-options"></div>
+    <span class="game-timer" id="game-player-timer">⏱ --:--</span>
   </div>
 
   <!-- Player: enter room code -->
@@ -288,10 +320,11 @@ hostStartBtn.addEventListener('click', function() {
     if (snap.val() !== storedKey) {
       throw new Error('Только ведущий может запустить игру');
     }
-    return db.ref('rooms/' + currentRoomCode).update({
-      state: 'playing',
-      currentItem: 0
-    });
+    var gameData = getSampleGameData();
+    gameData.state = 'playing';
+    gameData.currentItem = 0;
+    gameData.timerEndsAt = Date.now() + gameData.items[0].timeLimit * 1000;
+    return db.ref('rooms/' + currentRoomCode).update(gameData);
   }).catch(function(err) {
     showError(hostStartError, 'Ошибка: ' + err.message);
     hostStartBtn.disabled = false;
@@ -299,27 +332,182 @@ hostStartBtn.addEventListener('click', function() {
   });
 });
 
+// ─── Sample Game Data (no editor yet — P2) ──────────────────────────
+function getSampleGameData() {
+  return {
+    items: [
+      {
+        type: 'question',
+        questionType: 'choice',
+        question: 'В каком году пал Западный Рим?',
+        media: null,
+        options: ['395', '476', '410', '1453'],
+        correctAnswer: '476',
+        maxScore: 1000,
+        timeLimit: 20,
+        roundName: 'История'
+      },
+      {
+        type: 'question',
+        questionType: 'choice',
+        question: 'Какая планета самая большая в Солнечной системе?',
+        media: null,
+        options: ['Сатурн', 'Юпитер', 'Нептун', 'Уран'],
+        correctAnswer: 'Юпитер',
+        maxScore: 1000,
+        timeLimit: 20,
+        roundName: 'Космос'
+      },
+      {
+        type: 'question',
+        questionType: 'choice',
+        question: 'Какой язык программирования основан на котятах?',
+        media: null,
+        options: ['JavaScript', 'Python', 'Java', 'C#'],
+        correctAnswer: 'JavaScript',
+        maxScore: 1000,
+        timeLimit: 20,
+        roundName: 'Технологии'
+      }
+    ]
+  };
+}
+
+// ─── Game State ─────────────────────────────────────────────────────
+var gameItems = null;
+var gameItemCount = 0;
+var timerInterval = null;
+var answerCountRef = null;
+
 // ─── Game State Listener ────────────────────────────────────────────
 function listenGameState(code, isHost) {
   var roomRef = db.ref('rooms/' + code);
+
   roomRef.child('state').on('value', function(snapshot) {
     var state = snapshot.val();
     if (state === 'playing') {
-      if (isHost) {
-        showScreen('screen-game-host');
-      } else {
-        showScreen('screen-game-player');
-      }
+      roomRef.once('value', function(snap) {
+        var room = snap.val();
+        gameItems = room.items || [];
+        gameItemCount = gameItems.length;
+        showScreen(isHost ? 'screen-game-host' : 'screen-game-player');
+        renderCurrentItem(code, isHost, room.currentItem, room.timerEndsAt);
+      });
     }
   });
+
   roomRef.child('currentItem').on('value', function(snapshot) {
-    var itemIndex = snapshot.val();
-    if (itemIndex !== null) {
-      var statusEl = isHost
-        ? document.getElementById('game-host-status')
-        : document.getElementById('game-player-status');
-      if (statusEl) statusEl.textContent = 'Вопрос ' + (itemIndex + 1);
+    var idx = snapshot.val();
+    if (idx !== null && gameItems) {
+      roomRef.child('timerEndsAt').once('value', function(timerSnap) {
+        renderCurrentItem(code, isHost, idx, timerSnap.val());
+      });
     }
+  });
+}
+
+// ─── Render Current Item ────────────────────────────────────────────
+function renderCurrentItem(code, isHost, itemIndex, timerEndsAt) {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (answerCountRef) { answerCountRef.off(); answerCountRef = null; }
+
+  var item = gameItems[itemIndex];
+  if (!item) return;
+
+  var prefix = isHost ? 'host' : 'player';
+
+  document.getElementById('game-' + prefix + '-round').textContent = item.roundName || '';
+  document.getElementById('game-' + prefix + '-progress').textContent = 'Вопрос ' + (itemIndex + 1) + ' / ' + gameItemCount;
+  document.getElementById('game-' + prefix + '-question').textContent = item.question;
+
+  renderMedia(item.media, 'game-' + prefix + '-media');
+
+  var optsContainer = document.getElementById('game-' + prefix + '-options');
+  optsContainer.innerHTML = '';
+
+  if (item.questionType === 'choice' && item.options) {
+    item.options.forEach(function(opt) {
+      var btn = document.createElement('button');
+      btn.className = 'opt-btn';
+      btn.textContent = opt;
+      if (!isHost) {
+        btn.addEventListener('click', function() {
+          selectAnswer(code, itemIndex, opt);
+        });
+      }
+      optsContainer.appendChild(btn);
+    });
+  }
+
+  // Timer
+  if (timerEndsAt) {
+    startTimer(timerEndsAt, document.getElementById('game-' + prefix + '-timer'));
+  }
+
+  // Host: answer count
+  if (isHost) {
+    listenAnswerCount(code, itemIndex);
+  }
+}
+
+// ─── Media Renderer ─────────────────────────────────────────────────
+function renderMedia(media, containerId) {
+  var container = document.getElementById(containerId);
+  container.innerHTML = '';
+  if (!media || !media.url) return;
+  if (media.type === 'youtube') {
+    var iframe = document.createElement('iframe');
+    iframe.src = media.url;
+    iframe.allowFullscreen = true;
+    container.appendChild(iframe);
+  } else if (media.type === 'image') {
+    var img = document.createElement('img');
+    img.src = media.url;
+    img.alt = '';
+    container.appendChild(img);
+  } else if (media.type === 'audio') {
+    var audio = document.createElement('audio');
+    audio.src = media.url;
+    audio.controls = true;
+    container.appendChild(audio);
+  }
+}
+
+// ─── Timer ──────────────────────────────────────────────────────────
+function startTimer(endsAt, displayEl) {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  function tick() {
+    var remaining = Math.max(0, Math.floor((endsAt - Date.now()) / 1000));
+    var min = Math.floor(remaining / 60);
+    var sec = remaining % 60;
+    displayEl.textContent = '⏱ ' + min + ':' + (sec < 10 ? '0' : '') + sec;
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+  tick();
+  timerInterval = setInterval(tick, 1000);
+}
+
+// ─── Player: Select Answer ──────────────────────────────────────────
+function selectAnswer(code, itemIndex, answer) {
+  // P1.7 — will persist answer to Firebase
+  // For now, visually highlight the selected option
+  var container = document.getElementById('game-player-options');
+  var buttons = container.querySelectorAll('.opt-btn');
+  buttons.forEach(function(btn) {
+    btn.classList.toggle('selected', btn.textContent === answer);
+  });
+}
+
+// ─── Host: Answer Count ─────────────────────────────────────────────
+function listenAnswerCount(code, itemIndex) {
+  var ref = db.ref('rooms/' + code + '/answers/' + itemIndex);
+  answerCountRef = ref;
+  ref.on('value', function(snapshot) {
+    var count = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+    document.getElementById('game-host-answered').textContent = 'Ответило: ' + count;
   });
 }
 
