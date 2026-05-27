@@ -35,6 +35,17 @@ All pipeline outputs (research, design docs, plans, reviews) live in `.artifacts
 - Served via GitHub Pages from root
 - No test framework (vanilla JS)
 
+## HARD RULE: Pipeline Only
+
+**You MUST NOT make any direct code changes. ALL work MUST go through the four-phase pipeline:**
+
+1. `/research <task>` — facts-only codebase analysis
+2. `/design <slug>` — C4 architecture, data-flow, sequences
+3. `/plan <slug>` — ordered implementation phases
+4. `/implement <slug> [N]` — writer + 4 parallel reviewers
+
+Use `/feature <task>` to auto-advance through all phases. ⚠️ This rule is also enforced by `.opencode/rules/pipeline-mandatory.md` — any direct edit without pipeline artifacts is a violation.
+
 ## Conventions
 
 - Feature slugs are kebab-case, derived from task description
