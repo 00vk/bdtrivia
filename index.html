@@ -70,6 +70,20 @@ input[type="text"]:focus { outline-color: rgba(255,255,255,0.6); }
     <div class="room-code" id="room-code-display">----</div>
     <p>Введите этот код на телефоне</p>
     <div id="player-list"><p class="waiting">Ожидаем игроков...</p></div>
+    <button class="btn btn-primary" id="host-start-btn" style="margin-top:8px" disabled>Начать игру</button>
+    <div id="host-start-error" class="error hidden"></div>
+  </div>
+
+  <!-- Host: game in progress (placeholder, built out in P1.4+) -->
+  <div id="screen-game-host" class="screen">
+    <h2>Игра идёт!</h2>
+    <p id="game-host-status">Загружаем вопрос...</p>
+  </div>
+
+  <!-- Player: game started (placeholder, built out in P1.4+) -->
+  <div id="screen-game-player" class="screen">
+    <h2>Игра началась!</h2>
+    <p id="game-player-status">Ожидаем вопрос...</p>
   </div>
 
   <!-- Player: enter room code -->
@@ -189,8 +203,11 @@ hostCreateBtn.addEventListener('click', function() {
 
   createUniqueRoomCode().then(function(code) {
     currentRoomCode = code;
+    var hostKey = Array.from(crypto.getRandomValues(new Uint8Array(6)), function(b) { return b.toString(36).padStart(2, '0'); }).join('').slice(0, 10);
+    sessionStorage.setItem('bdtrivia_hostKey', hostKey);
     return db.ref('rooms/' + code).set({
       hostNickname: nickname,
+      hostKey: hostKey,
       createdAt: firebase.database.ServerValue.TIMESTAMP,
       state: 'lobby'
     });
@@ -198,6 +215,7 @@ hostCreateBtn.addEventListener('click', function() {
     document.getElementById('room-code-display').textContent = currentRoomCode;
     showScreen('screen-lobby-host');
     listenPlayers(currentRoomCode);
+    listenGameState(currentRoomCode, true);
   }).catch(function(err) {
     showError(hostCreateError, 'Ошибка: ' + err.message);
   }).finally(function() {
@@ -224,6 +242,7 @@ function listenPlayers(code) {
       chip.textContent = p.nickname;
       container.appendChild(chip);
     }
+    updateStartButton();
   });
 
   ref.on('child_removed', function(snapshot) {
@@ -234,6 +253,72 @@ function listenPlayers(code) {
       p.className = 'waiting';
       p.textContent = 'Ожидаем игроков...';
       container.appendChild(p);
+    }
+    updateStartButton();
+  });
+}
+
+// Enable start button only when players are connected
+function updateStartButton() {
+  var btn = document.getElementById('host-start-btn');
+  if (btn) {
+    var count = document.querySelectorAll('#player-list .player-chip').length;
+    btn.disabled = count === 0;
+  }
+}
+
+// ─── Host: Start Game ──────────────────────────────────────────────
+var hostStartBtn = document.getElementById('host-start-btn');
+var hostStartError = document.getElementById('host-start-error');
+
+hostStartBtn.addEventListener('click', function() {
+  hideError(hostStartError);
+  hostStartBtn.disabled = true;
+  hostStartBtn.textContent = 'Запускаем...';
+
+  var storedKey = sessionStorage.getItem('bdtrivia_hostKey');
+  if (!storedKey) {
+    showError(hostStartError, 'Не удалось подтвердить права ведущего. Обновите страницу.');
+    hostStartBtn.disabled = false;
+    hostStartBtn.textContent = 'Начать игру';
+    return;
+  }
+
+  db.ref('rooms/' + currentRoomCode + '/hostKey').once('value').then(function(snap) {
+    if (snap.val() !== storedKey) {
+      throw new Error('Только ведущий может запустить игру');
+    }
+    return db.ref('rooms/' + currentRoomCode).update({
+      state: 'playing',
+      currentItem: 0
+    });
+  }).catch(function(err) {
+    showError(hostStartError, 'Ошибка: ' + err.message);
+    hostStartBtn.disabled = false;
+    hostStartBtn.textContent = 'Начать игру';
+  });
+});
+
+// ─── Game State Listener ────────────────────────────────────────────
+function listenGameState(code, isHost) {
+  var roomRef = db.ref('rooms/' + code);
+  roomRef.child('state').on('value', function(snapshot) {
+    var state = snapshot.val();
+    if (state === 'playing') {
+      if (isHost) {
+        showScreen('screen-game-host');
+      } else {
+        showScreen('screen-game-player');
+      }
+    }
+  });
+  roomRef.child('currentItem').on('value', function(snapshot) {
+    var itemIndex = snapshot.val();
+    if (itemIndex !== null) {
+      var statusEl = isHost
+        ? document.getElementById('game-host-status')
+        : document.getElementById('game-player-status');
+      if (statusEl) statusEl.textContent = 'Вопрос ' + (itemIndex + 1);
     }
   });
 }
@@ -298,6 +383,7 @@ playerJoinBtn.addEventListener('click', function() {
     sessionStorage.setItem('bdtrivia_playerId', currentPlayerId);
     sessionStorage.setItem('bdtrivia_room', currentRoomCode);
     showScreen('screen-lobby-player');
+    listenGameState(currentRoomCode, false);
     playersRef.child(currentPlayerId).onDisconnect().update({ connected: false });
   }).catch(function(err) {
     showError(playerJoinError, 'Ошибка: ' + err.message);
@@ -315,11 +401,15 @@ if (roomFromUrl) {
   currentRoomCode = roomFromUrl.toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (!currentRoomCode) { showScreen('screen-player-roomcode'); return; }
   db.ref('rooms/' + currentRoomCode).once('value').then(function(snapshot) {
-    if (snapshot.exists()) {
-      showScreen('screen-player-nickname');
-    } else {
+    if (!snapshot.exists()) { showScreen('screen-player-roomcode'); return; }
+    var room = snapshot.val();
+    if (room.state !== 'lobby') {
+      showError(playerCodeError, 'Игра уже началась');
+      document.getElementById('player-code-input').value = currentRoomCode;
       showScreen('screen-player-roomcode');
+      return;
     }
+    showScreen('screen-player-nickname');
   }).catch(function(err) {
     console.error('Room lookup failed:', err);
     showScreen('screen-player-roomcode');
