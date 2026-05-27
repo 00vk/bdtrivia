@@ -383,7 +383,7 @@ function showQRCode(code) {
   var base = window.location.origin + window.location.pathname.replace(/\/?$/, '');
   var url = base + '?room=' + code;
   var qrContainer = document.getElementById('lobby-qr');
-  qrContainer.innerHTML = '<img src="https://chart.googleapis.com/chart?cht=qr&chs=280x280&chl=' + encodeURIComponent(url) + '&chld=L|0" alt="QR">';
+  qrContainer.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(url) + '" alt="QR">';
 }
 
 document.getElementById('copy-code-btn').addEventListener('click', function() {
