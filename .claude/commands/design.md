@@ -22,7 +22,7 @@ Example:
 
 ## Preconditions
 
-- `~/dev/ai-artifacts/<repo>/<feature>/research.md` must exist.
+- `.artifacts/<repo>/<feature>/research.md` must exist.
 - `state.json` should show `phases_completed` includes `research`.
 - If preconditions are not met, ask the user whether to:
   1. Run `/research` first,
@@ -32,7 +32,7 @@ Example:
 
 This command writes:
 ```
-~/dev/ai-artifacts/<repo-slug>/<feature-slug>/
+.artifacts/<repo-slug>/<feature-slug>/
 └── design/
     ├── architecture.md       # C4: context, containers, components (Mermaid)
     ├── data-flow.md          # Data flow diagrams
@@ -121,18 +121,14 @@ This command writes:
 6. **Report**
    Print the list of generated files and remind the user to review the design before running `/plan`.
 
-## Human Review Loop
+## AI Validation
 
-After design files are generated, the user is expected to:
-1. Read the design pack.
-2. Either edit files directly OR run `/design <feature> --revise "<feedback>"` to regenerate with feedback.
-
-(Revise mode is a future enhancement — for now, manual edits are the path.)
+Design runs an inline standards conformance self-check before finalizing. Results appended to `architecture.md`.
 
 ## Output to User
 
 ```
-Design complete: ~/dev/ai-artifacts/<repo>/<feature>/design/
+Design complete: .artifacts/<repo>/<feature>/design/
 
 Files generated:
 - architecture.md (C4 + standards conformance)

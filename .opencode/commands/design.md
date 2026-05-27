@@ -14,21 +14,23 @@ description: "Phase 2: Design — C4 diagrams, data flow, sequence, test strateg
 
 ## Preconditions
 
-- `~/dev/ai-artifacts/<repo>/<feature>/research.md` must exist.
+- `.artifacts/<feature>/research.md` must exist.
 
 ## What To Do
 
-1. **Load context** — read `research.md` and project standards (repo CLAUDE.md, code-quality rules).
+1. **Load context** — read `research.md` and project standards.
 
-2. **Generate design artifacts** in `~/dev/ai-artifacts/<repo>/<feature>/design/`:
+2. **Generate design artifacts** in `.artifacts/<feature>/design/`:
 
    - **architecture.md** — C4 context/container/component diagrams (Mermaid), dependencies, naming
    - **data-flow.md** — DFD per major flow (create/read/update/delete)
    - **sequence.md** — sequence diagrams per main API operation, include error paths
    - **tests.md** — test layers (unit/integration/contract/e2e), explicit test cases
    - **risks.md** — risks with severity, mitigation, fallback
-   - **api-contracts.md** — REST endpoints, Kafka topics, breaking changes
+   - **api-contracts.md** — API endpoints, data contracts, breaking changes
    - **adr.md** (for non-trivial features) — Architecture Decision Record
+
+   Include header on each file: `<!-- feature: <slug> | phase: design | date: <date> | agent: design-lead -->`
 
 3. **Rules:**
    - Mermaid for all diagrams
@@ -38,4 +40,6 @@ description: "Phase 2: Design — C4 diagrams, data flow, sequence, test strateg
 
 4. **Standards conformance self-check** — append results to `architecture.md`.
 
-5. **Output** list of generated files to user. Next step: `/plan <feature-slug>`.
+5. **Commit** — `git add .artifacts/<feature>/ && git commit -m "<feature>: design phase complete"`.
+
+6. **Output** list of generated files. Next step: `/plan <feature-slug>`.

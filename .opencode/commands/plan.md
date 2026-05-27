@@ -14,7 +14,8 @@ description: "Phase 3: Implementation plan — break design into sequential, sel
 
 ## Preconditions
 
-- `research.md` and `design/architecture.md` exist.
+- `.artifacts/<feature>/research.md` exists.
+- `.artifacts/<feature>/design/architecture.md` exists.
 
 ## What To Do
 
@@ -27,10 +28,13 @@ description: "Phase 3: Implementation plan — break design into sequential, sel
 
    Typical phase order: domain model → boundaries → external adapters → persistence → use cases → controller → wiring → integration tests.
 
-3. **Write artifacts** in `~/dev/ai-artifacts/<repo>/<feature>/plan/`:
+3. **Write artifacts** in `.artifacts/<feature>/plan/`:
    - `README.md` — feature summary, phase index, acceptance criteria
    - `phase-NN-<name>.md` per phase with: goal, inputs, outputs (exact file paths), implementation steps, tests, quality gates, out-of-scope
+   - Include header on each file: `<!-- feature: <slug> | phase: plan | date: <date> | agent: plan-lead -->`
 
 4. **Standards check** — verify dependency direction, no phase relies on later phases, file paths match project structure.
 
-5. **Output** plan summary to user. Next step: `/implement <feature-slug>`.
+5. **Commit** — `git add .artifacts/<feature>/ && git commit -m "<feature>: plan phase complete"`.
+
+6. **Output** plan summary. Next step: `/implement <feature-slug>`.

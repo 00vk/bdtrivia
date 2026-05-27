@@ -22,13 +22,13 @@ Phase names for flags: `research`, `design`, `plan`, `implement`.
 
 ## Behaviour
 
-### Default mode — stop after each phase
+### Default mode — auto-advance through phases
 
 1. Determine feature slug:
    - If the argument is a task description (multi-word, contains spaces or punctuation suggesting prose), this is a first invocation:
      - Derive feature slug from the description (kebab-case, 2–4 words). Confirm with user before writing.
      - Determine repo slug from current working directory's git root.
-     - Create `~/dev/ai-artifacts/<repo>/<feature>/state.json` with initial state.
+     - Create `.artifacts/<repo>/<feature>/state.json` with initial state.
    - If the argument is a kebab-case slug that already has an artifact directory: this is a continuation. Load `state.json`.
 
 2. Read `state.json`. Identify the next pending phase:
@@ -43,19 +43,9 @@ Phase names for flags: `research`, `design`, `plan`, `implement`.
    - Use the feature slug already resolved (do not re-prompt for it).
    - Pass through any flags relevant to the phase command.
 
-4. **Stop after the phase completes.** Print:
-   - What was produced (file paths).
-   - What the user should review.
-   - The command to continue (`/feature <slug>` for next phase, or specific actions if review feedback is needed).
+4. **Auto-advance** — after phase completes, immediately proceed to next phase. Implement auto-advances through its sub-phases as well.
 
-5. The user reviews, optionally edits files, and runs `/feature <slug>` again.
-
-### `--auto` mode
-
-After completing one phase, immediately proceed to the next without stopping.
-Continues through all remaining phases.
-**Note:** `/implement` itself has internal stops between its sub-phases (phase-01, phase-02, …)
-by default. Pass `--auto` here too to chain implement sub-phases as well.
+5. **Commit after each phase** — each sub-command handles its own commit.
 
 ### `--stop-at <phase>` mode
 
@@ -93,32 +83,20 @@ If any per-phase limit is hit, `/feature` stops regardless of mode (including `-
 
 ## What `/feature` does NOT do
 
-- **Does not skip review.** Default mode stops after every phase. Even in `--auto` mode, `/implement` still stops between sub-phases unless `--auto` is propagated.
-- **Does not commit.** Code commits remain a manual step via `/commit`.
-- **Does not push or open PRs.** Use `/pr` after committing.
+- **Does not wait for human review.** All validation is AI-driven between phases.
+- **Does not push or open PRs.**
+- **Does not delete artifacts.** `--restart <phase>` overwrites artifacts of that phase onwards, but does not touch earlier phases.
 - **Does not delete artifacts.** `--restart <phase>` overwrites artifacts of that phase onwards, but does not touch earlier phases.
 
-## Required user actions
+## AI-driven validation
 
-The minimal end-to-end happy path:
+All phases validate internally via AI agents:
+- Design runs a standards conformance self-check
+- Plan validates dependency direction and file path accuracy
+- Implement runs 4 parallel reviewers (architecture, security, plan-conformance, code quality)
+- Max 3 iterations per phase before escalation
 
-| Step | User action | What happens |
-|---|---|---|
-| 1 | `/feature add user avatar upload` | Slug `user-avatar` derived, confirmed. Research runs. Stops. |
-| 2 | Read `research.md`, edit if needed. | — |
-| 3 | `/feature user-avatar` | Design runs. Stops. |
-| 4 | Read `design/*.md`, edit if needed. | — |
-| 5 | `/feature user-avatar` | Plan runs. Stops. |
-| 6 | Read `plan/*.md`, edit if needed. | — |
-| 7 | `/feature user-avatar` | Implement phase 1 runs (writer + reviewers). Stops. |
-| 8 | Read diff, run quick sanity check. | — |
-| 9 | `/feature user-avatar` | Implement phase 2 runs. Stops. |
-| ... | ... | until all implementation phases complete |
-| N | `/commit` | Commits the work (`commit-agent` handles message). |
-| N+1 | `/pr` | Opens PR. |
-
-If at any step you want to **regenerate** a phase: `/feature user-avatar --restart <phase>`.
-If you want to **skip ahead non-stop**: `/feature user-avatar --auto` (not recommended for non-trivial work).
+No human gates — AI agents handle review loops. Results are committed to `.artifacts/<feature>/reviews/`.
 
 ## Output to user (per phase completion)
 
@@ -157,7 +135,7 @@ Suggested next steps:
 ## Implementation Notes (for the assistant executing this command)
 
 1. **Argument parsing.**
-   - If argument matches kebab-case `[a-z0-9-]+` and a directory exists at `~/dev/ai-artifacts/*/{arg}/` — treat as feature slug, continuation.
+   - If argument matches kebab-case `[a-z0-9-]+` and a directory exists at `.artifacts/*/{arg}/` — treat as feature slug, continuation.
    - Otherwise treat as task description, derive slug, ask user to confirm slug before creating directory.
 
 2. **Feature slug ambiguity across repos.**

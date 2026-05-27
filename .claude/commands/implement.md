@@ -65,15 +65,22 @@ For each phase in order, do the following:
    - Relevant project standards
    - Strict instruction: produce a verdict (`pass` / `fail`) plus a list of issues with file:line references for fails
 
-4. **Collect reviewer verdicts**
+4. **Save reviewer reports** in `.artifacts/<feature>/reviews/phase-NN/`:
+   - `architecture-review.md`
+   - `security-review.md`
+   - `plan-conformance-review.md`
+   - `code-quality-review.md`
+   - Each file includes header: `<!-- feature: <slug> | phase: implement-NN | date: <date> | reviewer: <name> -->`
+
+5. **Collect reviewer verdicts**
    - All four reviewers pass → phase is complete.
    - Any reviewer fails → collect all failures, send the writer back to fix them. Loop.
    - **Hard limits** to prevent runaway:
-     - Max 3 writer-review iterations per phase. After that, stop and ask the user.
+     - Max 3 writer-review iterations per phase. After that, stop and report failure.
      - Max 25 tool calls per writer turn within a phase.
-     - If iteration limit hit, the system MUST stop and surface a structured failure to the user (not silently continue).
+     - If iteration limit hit, report structured failure (not silently continue).
 
-5. **Run project quality checks**
+6. **Run project quality checks**
    After reviewers pass, run project-native checks (read from `<repo>/CLAUDE.md` or default):
    - Java/Gradle: `./gradlew spotlessApply && ./gradlew build && ./gradlew test integrationTest`
    - Go: `go build ./... && go test ./...`
@@ -81,18 +88,14 @@ For each phase in order, do the following:
 
    If any of these fail, the writer is sent back to fix. Do NOT commit a phase with failing build/tests.
 
-6. **Update state**
+7. **Update state**
    - Mark `implementation_phases[N].status = "complete"`.
    - Add files changed to `implementation_phases[N].files_changed`.
    - Update `phase`, `updated_at`.
 
-7. **Stop between phases (default) or proceed (opt-in)**
-   - **Default**: after each phase, stop and report. User reviews. User runs `/implement <feature-slug>` again to proceed to next phase. This gives a human the chance to spot-check and commit per phase.
-   - **Auto-continue**: if user passed `--auto-continue`, immediately start the next pending phase. Still respect hard limits.
+8. **Auto-advance** — after each phase completes, immediately proceed to the next pending phase. Reviewers handle validation. Still respect hard limits.
 
-8. **Do NOT auto-commit**
-   This command produces code but does not commit. The user runs `/commit` (which uses `commit-agent`) when ready.
-   `git status` is run at end of each phase to remind the user what changed.
+9. **Auto-commit** — after reviewers pass and quality checks pass, commit code + review reports: `git add -A && git commit -m "<feature>: phase NN — <phase-name>"`.
 
 ## Parameters for Subagent Task Calls
 
@@ -103,22 +106,16 @@ description: "Implement phase <N>: <name>"
 prompt: "You are the implementation writer for phase <N> of feature <feature-slug>.
 
 Read these files first:
-- ~/dev/ai-artifacts/<repo>/<feature>/plan/phase-<NN>-<name>.md  (your task)
-- ~/dev/ai-artifacts/<repo>/<feature>/design/architecture.md  (architectural constraints)
-- ~/dev/ai-artifacts/<repo>/<feature>/research.md  (existing code references)
-- <repo>/CLAUDE.md (if exists)
-- ~/.claude/rules/code-quality.md
-- <stack-specific rule files based on repo>
+- .artifacts/<feature>/plan/phase-<NN>-<name>.md  (your task)
+- .artifacts/<feature>/design/architecture.md  (architectural constraints)
+- .artifacts/<feature>/research.md  (existing code references)
 
 Then:
 1. Implement the phase exactly as described. Do not exceed scope.
 2. Add/modify only the files listed in the phase file. If you need to touch others, stop and explain why.
-3. Add tests as listed in the phase file.
-4. Run build and tests. Report failures verbatim.
-5. Output a short report:
+3. Write code only. Do NOT write tests for this project.
+4. Output a short report:
    - Files created/modified (full paths)
-   - Build status
-   - Test status (pass/fail counts)
    - Any blockers
 
 Do NOT commit. Do NOT push. Do NOT create branches."
@@ -128,14 +125,14 @@ Do NOT commit. Do NOT push. Do NOT create branches."
 ```
 subagent_type: "general-purpose"
 description: "<reviewer-role> review of phase <N>"
-prompt: "Read ~/.claude/agents/pipeline-<reviewer>-reviewer.md and follow its instructions.
+prompt: "Read .opencode/agents/pipeline-<reviewer>-reviewer.md and follow its instructions.
 
 Feature: <feature-slug>
 Phase: <N>
-Phase file: ~/dev/ai-artifacts/<repo>/<feature>/plan/phase-<NN>-<name>.md
+Phase file: .artifacts/<feature>/plan/phase-<NN>-<name>.md
 Files changed by writer: <list>
 
-Produce a verdict (pass/fail) with concrete file:line issues if fail."
+Produce a verdict (pass/fail) with concrete file:line issues if fail. Save report to .artifacts/<feature>/reviews/phase-<NN>/<reviewer>-review.md"
 ```
 
 ## Reviewer Verdict Format
@@ -174,8 +171,8 @@ After each phase:
 Phase <N> complete: <name>
 
 Files changed:
-- path/a.go
-- path/b_test.go
+- path/a.js
+- path/b.js
 
 Build: ✅
 Tests: ✅ 142 passed
@@ -186,7 +183,8 @@ Code quality: ✅
 
 Iterations used: 1/3
 
-Next: run `/implement <feature-slug>` for phase <N+1>, or `/commit` to commit this phase.
+Reviews saved: .artifacts/<feature>/reviews/phase-NN/
+Autocommitted: <commit-hash>
 ```
 
 On failure:
@@ -206,9 +204,9 @@ Suggested next steps:
 ## Important Notes
 
 - **Clean context per phase.** Each phase runs in a new conversation context — handoff is via the phase file and `state.json`.
-- **No auto-commit, no auto-push.** Code review is the user's responsibility.
-- **Branch protection.** If on `main`/`master`, stop and ask for a feature branch (per `~/.claude/rules/git-and-commits.md`).
-- **Failures are loud.** When a phase is blocked, the user is told clearly with concrete issues — never silently retry.
+- **Auto-commit.** After reviewers pass, commit code + review reports to `.artifacts/`.
+- **Branch protection.** If on `main`/`master`, stop and ask for a feature branch.
+- **Failures are loud.** When a phase is blocked, report clearly with concrete issues — never silently retry.
 - **Reviewers run in parallel.** A single message with four Task calls.
 - **Quality checks are project-native.** Read project's own checks from its `CLAUDE.md` if present; fall back to stack defaults.
 

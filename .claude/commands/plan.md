@@ -21,8 +21,8 @@ Example:
 
 ## Preconditions
 
-- `~/dev/ai-artifacts/<repo>/<feature>/research.md` exists.
-- `~/dev/ai-artifacts/<repo>/<feature>/design/architecture.md` exists.
+- `.artifacts/<repo>/<feature>/research.md` exists.
+- `.artifacts/<repo>/<feature>/design/architecture.md` exists.
 - `state.json` shows `design` in `phases_completed`.
 
 If preconditions are not met, stop and tell the user what's missing.
@@ -31,7 +31,7 @@ If preconditions are not met, stop and tell the user what's missing.
 
 This command writes:
 ```
-~/dev/ai-artifacts/<repo-slug>/<feature-slug>/
+.artifacts/<repo-slug>/<feature-slug>/
 └── plan/
     ├── README.md                # Plan summary + phase index
     ├── phase-01-<short-name>.md
@@ -135,14 +135,9 @@ This command writes:
 - **Don't include code.** Plan describes WHAT and WHERE. Implementation writes the code.
 - **File paths must be real.** Cross-check every path against research findings or the actual repo layout.
 
-## Human Review Loop
+## AI Validation
 
-After plan is generated, the user is expected to:
-1. Read `plan/README.md` and each phase file.
-2. Edit files directly OR re-run `/plan` with feedback (future enhancement).
-3. Pay particular attention to: phase ordering, file paths, scope boundaries.
-
-A bad plan caught here saves hours of bad implementation later.
+Plan runs an inline standards check before finalizing: dependency direction, no later-phase dependencies, file paths match project structure.
 
 ## Failure Modes
 

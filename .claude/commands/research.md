@@ -27,14 +27,14 @@ Examples:
 
 All artifacts live **outside** the repository under:
 ```
-~/dev/ai-artifacts/<repo-slug>/<feature-slug>/
+.artifacts/<feature-slug>/
 ```
 - `repo-slug` = basename of `git rev-parse --show-toplevel` (or basename of repo path)
 - `feature-slug` = kebab-case derived from task description (confirm with user if ambiguous)
 
 This command writes:
 ```
-~/dev/ai-artifacts/<repo-slug>/<feature-slug>/
+.artifacts/<feature-slug>/
 ├── state.json
 └── research.md
 ```
@@ -43,8 +43,8 @@ This command writes:
 
 1. **Resolve paths**
    - Determine repo root (current dir or argument).
-   - Determine repo-slug and feature-slug.
-   - Create `~/dev/ai-artifacts/<repo>/<feature>/` if missing.
+   - Determine feature-slug.
+   - Create `.artifacts/<feature>/` if missing.
    - Write/update `state.json` with `phase: "research"`, `status: "in_progress"`.
 
 2. **Decompose research into directions**
@@ -127,7 +127,7 @@ Return the result as a Markdown section ready to paste into the final research.m
 
 After research completes, print:
 ```
-Research complete: ~/dev/ai-artifacts/<repo>/<feature>/research.md
+Research complete: .artifacts/<repo>/<feature>/research.md
 
 Summary:
 - <N> directions explored
@@ -140,7 +140,7 @@ Next: review research.md, then run `/design <feature-slug>` to proceed.
 ## Important Notes
 
 - **Clean context per fresh invocation.** Each `/research` run starts a new context. Subagents also get clean contexts.
-- **No code modification.** This command never writes to the repo. Only to `~/dev/ai-artifacts/`.
+- **No code modification.** This command never writes to the repo. Only to `.artifacts/`.
 - **Facts only.** If you find yourself writing "we should" or "it would be better", stop and reword as fact.
 - **Feature slug stability.** Once chosen, the feature slug is reused for all subsequent phases. Confirm with user before writing.
 - **Idempotent.** Running `/research` again with the same feature slug overwrites the previous `research.md` after confirming with the user.
