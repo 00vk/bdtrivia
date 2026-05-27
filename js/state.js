@@ -10,7 +10,8 @@
   editorExpandedIdx: -1,
   aiModel: null,
   aiReady: false,
-  currentLang: 'ru'
+  currentLang: 'ru',
+  gameStateTimerEnds: null
 };
 
 

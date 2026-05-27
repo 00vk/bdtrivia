@@ -73,9 +73,11 @@
     <div class="media-container" id="game-host-media"></div>
     <div id="game-host-options"></div>
     <div class="game-bar">
-      <span class="game-timer" id="game-host-timer">⏱ --:--</span>
+      <span class="game-timer" id="game-host-timer">â± --:--</span>
       <span class="game-answered" id="game-host-answered"></span>
+      <button id="game-host-present-btn" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:6px;padding:4px 8px;font-size:0.85em;cursor:pointer;" data-i18n="present.enter"></button>
     </div>
+  </div>
   </div>
 
   <!-- Player: game in progress -->
@@ -123,6 +125,19 @@
       <button class="btn btn-secondary" id="packs-recovery-btn" style="padding:14px 20px;min-width:auto;" data-i18n="packs.recoveryBtn"></button>
     </div>
     <div id="packs-error" class="error hidden"></div>
+  </div>
+
+  <!-- Presentation mode -->
+  <div id="screen-presentation" class="screen">
+    <div id="presentation-content" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
+      <div class="presentation-round" id="presentation-round"></div>
+      <div class="presentation-question" id="presentation-question"></div>
+      <div class="presentation-media" id="presentation-media"></div>
+      <div class="presentation-options" id="presentation-options"></div>
+      <div class="presentation-timer" id="presentation-timer"></div>
+    </div>
+    <div class="presentation-pause-overlay" id="presentation-pause-overlay">⏸</div>
+    <div class="presentation-controls-hint" id="presentation-hint" data-i18n="present.controls"></div>
   </div>
 
 </div>

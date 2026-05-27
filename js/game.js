@@ -7,6 +7,7 @@ import { __ } from './locales.js';
 export function renderCurrentItem(code, isHost, itemIndex, timerEndsAt) {
   if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
   if (state.answerCountRef) { state.answerCountRef.off(); state.answerCountRef = null; }
+  state.gameStateTimerEnds = timerEndsAt || null;
 
   var item = state.gameItems[itemIndex];
   if (!item) return;

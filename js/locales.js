@@ -140,6 +140,10 @@ var ru = {
   'packs.error.notFound': 'Пак не найден',
   'packs.error.invalidCode': 'Неверный код (нужно 6 символов)',
   'packs.error.codeNotFound': 'Код не найден',
+
+  'present.enter': '🖥 Показать',
+  'present.pauseOverlay': '⏸',
+  'present.controls': 'Space — пауза · Esc — выход',
 };
 
 var en = {
@@ -272,6 +276,10 @@ var en = {
   'packs.error.notFound': 'Pack not found',
   'packs.error.invalidCode': 'Invalid code (need 6 characters)',
   'packs.error.codeNotFound': 'Code not found',
+
+  'present.enter': '🖥 Present',
+  'present.pauseOverlay': '⏸',
+  'present.controls': 'Space — pause · Esc — exit',
 };
 
 var strings = { ru: ru, en: en };
